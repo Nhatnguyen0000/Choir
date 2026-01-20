@@ -1,0 +1,8 @@
+{
+  "name": "Ca Đoàn",
+  "description": "Ứng dụng quản lý ca đoàn chuyên nghiệp dành cho Ban Trị Sự giáo xứ, hỗ trợ lập lịch, chọn bài hát phụng vụ và quản lý nhân sự.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
