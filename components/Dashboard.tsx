@@ -33,7 +33,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   const today = new Date().toISOString().split('T')[0];
   const todayEvent = events.find(e => e.date === today);
-  const nextEvents = events.filter(e => e.date >= today).slice(0, 3);
 
   return (
     <div className="max-w-4xl mx-auto space-y-12 animate-fade-in pb-16 px-4 pt-6">
@@ -43,22 +42,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </div>
         <div className="space-y-1">
           <h1 className="sacred-title text-3xl md:text-4xl font-medium text-slate-900 italic">Bình An Cho Anh Chị Em</h1>
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] italic">Ca Đoàn Thiên Thần • Bắc Hòa</p>
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.4em] italic">Ca Đoàn Thiên Thần • Giáo xứ Bắc Hòa</p>
         </div>
       </header>
 
-      <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8 md:p-14 text-center space-y-8 relative">
+      <section className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8 md:p-14 text-center space-y-8 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-1 bg-amberGold/20 rounded-full mt-5"></div>
         <div className="space-y-4">
           <span className="text-[9px] font-black text-amberGold uppercase tracking-[0.3em] bg-amber-50/50 px-4 py-1.5 rounded-full border border-amber-100/30">
-            {todayEvent ? 'Phụng Vụ Hôm Nay' : 'Tâm Tình Ngày Sống'}
+            {todayEvent ? 'Công tác Phụng vụ hôm nay' : 'Tâm tình ngày sống'}
           </span>
           <h2 className="sacred-title text-3xl md:text-5xl font-bold text-slate-800 italic leading-tight">
             {todayEvent ? todayEvent.massName : 'Tận Hiến Qua Lời Ca'}
           </h2>
           <p className="text-slate-500 text-[14px] font-medium italic max-w-lg mx-auto leading-relaxed">
             {todayEvent 
-              ? `Kính mời hiệp thông lúc ${todayEvent.time} tại ${todayEvent.location}.`
+              ? `Kính mời anh chị em hiệp thông lúc ${todayEvent.time} tại ${todayEvent.location}.`
               : '"Dù làm việc gì, hãy làm hết lòng như làm cho Chúa." (Cl 3,23)'}
           </p>
         </div>
@@ -74,8 +73,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { label: 'Hiệp Thông', value: `${avgAttendance}%`, icon: <Users size={20}/>, color: 'text-amber-600' },
-          { label: 'Ngân Quỹ', value: `${balance.toLocaleString()}đ`, icon: <TrendingUp size={20}/>, color: 'text-emerald-600' },
+          { label: 'Sự Hiệp Thông', value: `${avgAttendance}%`, icon: <Users size={20}/>, color: 'text-amber-600' },
+          { label: 'Ngân Quỹ Đoàn', value: `${balance.toLocaleString()}đ`, icon: <TrendingUp size={20}/>, color: 'text-emerald-600' },
           { label: 'Thánh Nhạc', value: `${songs.length} Bài`, icon: <Music size={20}/>, color: 'text-blue-600' },
         ].map((stat, i) => (
           <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 flex flex-col items-center text-center space-y-2 group transition-all shadow-sm">

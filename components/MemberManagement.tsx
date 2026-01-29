@@ -83,6 +83,10 @@ const MemberManagement: React.FC = () => {
     setSelectedDate(d.toISOString().split('T')[0]);
   };
 
+  /**
+   * Xuất danh sách ca viên ra file Excel
+   * Cột: STT, Tên Thánh, Họ và Tên, Số điện thoại, Vai trò, Trạng thái
+   */
   const exportToExcel = () => {
     const dataToExport = filtered.map((m, index) => ({
       'STT': index + 1,
@@ -158,17 +162,20 @@ const MemberManagement: React.FC = () => {
         <div className="flex gap-2">
           {activeTab === 'LIST' ? (
             <>
-              <button onClick={exportToExcel} title="Xuất dữ liệu Excel" className="glass-button p-3.5 rounded-2xl text-slate-400 hover:text-emeraldGreen transition-all shadow-sm flex items-center gap-2">
-                 <Download size={20} /> <span className="hidden md:inline text-[9px] uppercase tracking-widest font-black">Xuất Excel</span>
+              <button onClick={exportToExcel} title="Xuất dữ liệu Excel" className="glass-button px-5 py-3.5 rounded-2xl text-slate-400 hover:text-emeraldGreen transition-all shadow-sm flex items-center gap-2">
+                 <Download size={20} /> 
+                 <span className="hidden md:inline text-[9px] uppercase tracking-widest font-black">Xuất Excel</span>
               </button>
               <button onClick={() => { setEditingMember(null); setForm(initialForm); setIsModalOpen(true); }} className="active-pill px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.1em] flex items-center gap-2 shadow-lg hover:scale-[1.02] active:scale-95 transition-all">
                  <UserPlus size={18} /> Ghi danh ca viên
               </button>
             </>
           ) : (
-            <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-[1.5rem] border border-slate-200 shadow-sm ring-4 ring-slate-50">
-              <button onClick={() => changeDate(-1)} className="p-2 hover:bg-slate-50 text-slate-400 rounded-xl transition-colors"><ChevronLeft size={20}/></button>
-              <div className="flex items-center gap-3 px-4 border-x border-slate-100">
+            <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-[1.8rem] border border-slate-200 shadow-sm ring-4 ring-slate-50 transition-all hover:ring-amberGold/10">
+              <button onClick={() => changeDate(-1)} className="p-2 hover:bg-slate-50 text-slate-400 rounded-xl transition-colors">
+                <ChevronLeft size={20} />
+              </button>
+              <div className="flex items-center gap-3 px-4 border-x border-slate-100 relative group">
                 <Calendar size={18} className="text-amberGold" />
                 <input 
                   type="date" 
@@ -177,7 +184,9 @@ const MemberManagement: React.FC = () => {
                   className="text-[12px] font-black text-slate-700 outline-none uppercase tracking-widest cursor-pointer bg-transparent" 
                 />
               </div>
-              <button onClick={() => changeDate(1)} className="p-2 hover:bg-slate-50 text-slate-400 rounded-xl transition-colors"><ChevronRight size={20}/></button>
+              <button onClick={() => changeDate(1)} className="p-2 hover:bg-slate-50 text-slate-400 rounded-xl transition-colors">
+                <ChevronRight size={20} />
+              </button>
             </div>
           )}
         </div>
@@ -223,7 +232,7 @@ const MemberManagement: React.FC = () => {
                     </div>
                     <div>
                       <h4 className="text-[14px] font-black text-slate-800 leading-tight truncate max-w-[150px]">{m.name}</h4>
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">{m.saintName || 'Ca viên'}</p>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">{m.saintName || 'Hội viên'}</p>
                     </div>
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -274,7 +283,7 @@ const MemberManagement: React.FC = () => {
                   </div>
                   <div className="min-w-0">
                     <h4 className="text-[15px] font-black text-slate-800 leading-tight truncate">{member.name}</h4>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 italic">{member.saintName || 'Ca viên'}</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 italic">{member.saintName || 'Hội viên'}</p>
                   </div>
                 </div>
                 
@@ -336,7 +345,7 @@ const MemberManagement: React.FC = () => {
                     <input type="tel" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-bold outline-none" placeholder="090..." />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vai trò</label>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bổn phận</label>
                     <select value={form.role} onChange={e => setForm({...form, role: e.target.value as any})} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-bold outline-none">
                        {['Ca trưởng', 'Ca phó', 'Thư ký', 'Thủ quỹ', 'Thành viên', 'Nhạc công'].map(r => <option key={r} value={r}>{r}</option>)}
                     </select>

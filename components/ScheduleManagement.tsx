@@ -134,13 +134,13 @@ const ScheduleManagement: React.FC = () => {
         
         <div className="flex flex-wrap gap-2">
            <div className="flex items-center bg-white border border-slate-200 rounded-2xl shadow-sm p-1">
-              <button onClick={() => handleNavigate(-1)} className="p-3 hover:bg-slate-50 text-slate-400 hover:text-amberGold transition-all rounded-xl"><ChevronLeft size={18} /></button>
+              <button onClick={() => handleNavigate(-1)} className="p-3 hover:bg-slate-50 text-slate-400 rounded-xl"><ChevronLeft size={18} /></button>
               <div className="px-6 py-2 text-[10px] font-black text-slate-900 uppercase tracking-widest text-center min-w-[160px]">
                  {viewType === 'MONTH' ? `Tháng ${currentMonth} • ${currentYear}` : 
                   viewType === 'WEEK' ? `Tuần ${Math.ceil(currentDate.getDate() / 7)} • Th.${currentMonth}` :
                   currentDate.toLocaleDateString('vi-VN')}
               </div>
-              <button onClick={() => handleNavigate(1)} className="p-3 hover:bg-slate-50 text-slate-400 hover:text-amberGold transition-all rounded-xl"><ChevronRight size={18} /></button>
+              <button onClick={() => handleNavigate(1)} className="p-3 hover:bg-slate-50 text-slate-400 rounded-xl"><ChevronRight size={18} /></button>
            </div>
            <button onClick={() => { setEditingEvent(null); setIsModalOpen(true); }} className="active-pill px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg transition-transform active:scale-95">
              Lập lịch mới <Plus size={18} />
@@ -232,8 +232,8 @@ const ScheduleManagement: React.FC = () => {
                                      <Clock size={14} className="text-amberGold" /> {e.time} • {e.massName}
                                   </div>
                                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                     <button onClick={() => handleEdit(e)} className="p-2 text-slate-300 hover:text-amberGold"><Edit2 size={14}/></button>
-                                     <button onClick={() => deleteEvent(e.id)} className="p-2 text-slate-300 hover:text-rose-500"><Trash2 size={14}/></button>
+                                     <button onClick={() => handleEdit(e)} className="p-2 text-slate-300 hover:text-amberGold transition-colors"><Edit2 size={14}/></button>
+                                     <button onClick={() => deleteEvent(e.id)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={14}/></button>
                                   </div>
                                </div>
                              )) : <span className="text-[10px] font-bold text-slate-300 uppercase italic">Chưa ghi nhận công tác phụng vụ</span>}
@@ -283,8 +283,8 @@ const ScheduleManagement: React.FC = () => {
                                        <Sun size={24} />
                                     </div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                       <button onClick={() => handleEdit(e)} className="p-2 text-slate-300 hover:text-amberGold"><Edit2 size={18}/></button>
-                                       <button onClick={() => deleteEvent(e.id)} className="p-2 text-slate-300 hover:text-rose-500"><Trash2 size={18}/></button>
+                                       <button onClick={() => handleEdit(e)} className="p-2 text-slate-300 hover:text-amberGold transition-colors"><Edit2 size={18}/></button>
+                                       <button onClick={() => deleteEvent(e.id)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={18}/></button>
                                     </div>
                                  </div>
                                  <div className="mt-4">
