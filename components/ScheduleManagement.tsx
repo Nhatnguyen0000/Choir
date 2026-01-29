@@ -1,442 +1,340 @@
-
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Plus, 
-  Trash, 
-  UserPen, 
-  Calendar as CalendarIcon, 
-  MapPin, 
-  Clock, 
+  ChevronLeft, 
+  ChevronRight, 
   X, 
-  AlertCircle,
-  ChevronLeft,
-  ChevronRight,
-  List as ListIcon,
-  CalendarDays,
-  CalendarRange,
-  BookOpen,
-  Info
+  Trash2, 
+  Edit2,
+  MapPin, 
+  Calendar as CalendarIcon,
+  LayoutGrid,
+  List,
+  Clock,
+  Sun,
+  ShieldAlert,
+  Star,
+  Music
 } from 'lucide-react';
-import { ScheduleEvent, Song, OrdoEvent } from '../types';
-import { getOrdoEventForDate } from '../services/ordoService';
+import { useEventStore } from '../store';
+import { getOrdoForMonth } from '../services/ordoService';
+import { LiturgicalColor, ScheduleEvent } from '../types';
 
-interface ScheduleManagementProps {
-  scheduleItems: ScheduleEvent[];
-  setScheduleItems: React.Dispatch<React.SetStateAction<ScheduleEvent[]>>;
-  songs: Song[];
-}
+type ViewType = 'MONTH' | 'WEEK' | 'DAY';
 
-type ViewMode = 'MONTH' | 'WEEK' | 'LIST';
-
-const ScheduleManagement: React.FC<ScheduleManagementProps> = ({ scheduleItems, setScheduleItems, songs }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>('MONTH');
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 0, 1)); 
+const ScheduleManagement: React.FC = () => {
+  const { events, addEvent, updateEvent, deleteEvent } = useEventStore();
+  
+  const [viewType, setViewType] = useState<ViewType>('MONTH');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  
+  const currentMonth = currentDate.getMonth() + 1;
+  const currentYear = currentDate.getFullYear();
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string | null>(new Date(2026, 0, 1).toISOString().split('T')[0]);
+  
+  const [form, setForm] = useState<Partial<ScheduleEvent>>({
+    massName: '',
+    date: new Date().toISOString().split('T')[0],
+    time: '17:30',
+    type: 'MASS',
+    location: 'Nhà thờ Chính',
+    liturgicalColor: 'GREEN'
+  });
 
-  const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
-  const startDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
-
-  const monthYearLabel = useMemo(() => {
-    return currentDate.toLocaleString('vi-VN', { month: 'long', year: 'numeric' });
-  }, [currentDate]);
-
-  const calendarDays = useMemo(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const days = [];
-    const totalDays = daysInMonth(year, month);
-    const startDay = startDayOfMonth(year, month);
-
-    for (let i = 0; i < startDay; i++) {
-      days.push({ day: null, fullDate: null });
+  const ordoForMonth = useMemo(() => getOrdoForMonth(currentMonth, currentYear), [currentMonth, currentYear]);
+  
+  const getColorClass = (color?: LiturgicalColor) => {
+    switch (color) {
+      case 'WHITE': return 'bg-white border-slate-200 text-slate-800 ring-slate-100 shadow-sm';
+      case 'RED': return 'bg-rose-600 border-rose-500 text-white ring-rose-200';
+      case 'GREEN': return 'bg-emerald-600 border-emerald-500 text-white ring-emerald-200';
+      case 'VIOLET': return 'bg-liturgicalViolet border-liturgicalViolet text-white ring-purple-200';
+      case 'GOLD': return 'bg-amber-400 border-amber-300 text-slate-900 ring-amber-200';
+      default: return 'bg-slate-200 border-slate-300';
     }
+  };
 
-    for (let i = 1; i <= totalDays; i++) {
-      const dateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${i.toString().padStart(2, '0')}`;
-      days.push({ day: i, fullDate: dateStr });
-    }
-    return days;
-  }, [currentDate]);
-
-  const handlePrev = () => {
+  const handleNavigate = (direction: number) => {
     const newDate = new Date(currentDate);
-    if (viewMode === 'MONTH') newDate.setMonth(currentDate.getMonth() - 1);
-    else if (viewMode === 'WEEK') newDate.setDate(currentDate.getDate() - 7);
+    if (viewType === 'MONTH') {
+      newDate.setMonth(newDate.getMonth() + direction);
+    } else if (viewType === 'WEEK') {
+      newDate.setDate(newDate.getDate() + direction * 7);
+    } else {
+      newDate.setDate(newDate.getDate() + direction);
+    }
     setCurrentDate(newDate);
   };
 
-  const handleNext = () => {
-    const newDate = new Date(currentDate);
-    if (viewMode === 'MONTH') newDate.setMonth(currentDate.getMonth() + 1);
-    else if (viewMode === 'WEEK') newDate.setDate(currentDate.getDate() + 7);
-    setCurrentDate(newDate);
-  };
-
-  const handleSave = () => {
-    if (!editingEvent || !editingEvent.massName.trim()) return;
-    setScheduleItems(prev => {
-      const exists = prev.find(e => e.id === editingEvent.id);
-      if (exists) return prev.map(e => e.id === editingEvent.id ? editingEvent : e);
-      return [editingEvent, ...prev];
-    });
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.massName) return;
+    if (editingEvent) {
+      updateEvent({ ...editingEvent, ...form } as ScheduleEvent);
+    } else {
+      addEvent({ ...form, id: `e-${Date.now()}` } as ScheduleEvent);
+    }
     setIsModalOpen(false);
     setEditingEvent(null);
   };
 
-  const confirmDelete = () => {
-    if (deleteConfirmId) {
-      setScheduleItems(prev => prev.filter(e => e.id !== deleteConfirmId));
-      setDeleteConfirmId(null);
-    }
+  const handleEdit = (event: ScheduleEvent) => {
+    setEditingEvent(event);
+    setForm(event);
+    setIsModalOpen(true);
   };
 
-  const filteredEvents = useMemo(() => {
-    if (viewMode === 'LIST') return scheduleItems.sort((a, b) => a.date.localeCompare(b.date));
-    if (viewMode === 'MONTH') {
-      const year = currentDate.getFullYear();
-      const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
-      return scheduleItems.filter(e => e.date.startsWith(`${year}-${month}`));
+  const calendarCells = useMemo(() => {
+    const cells = [];
+    const firstDay = new Date(currentYear, currentMonth - 1, 1);
+    const startDay = firstDay.getDay(); 
+    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+    const prevMonthLastDay = new Date(currentYear, currentMonth - 1, 0).getDate();
+    
+    for (let i = startDay - 1; i >= 0; i--) {
+      cells.push({ day: prevMonthLastDay - i, isCurrentMonth: false, dateStr: '' });
     }
-    return scheduleItems;
-  }, [scheduleItems, viewMode, currentDate]);
-
-  const eventsForSelectedDate = useMemo(() => {
-    if (!selectedDate) return [];
-    return scheduleItems.filter(e => e.date === selectedDate);
-  }, [scheduleItems, selectedDate]);
-
-  const ordoForSelectedDate = useMemo(() => {
-    return selectedDate ? getOrdoEventForDate(selectedDate) : undefined;
-  }, [selectedDate]);
+    for (let i = 1; i <= daysInMonth; i++) {
+      const d = new Date(currentYear, currentMonth - 1, i);
+      cells.push({ day: i, isCurrentMonth: true, dateStr: d.toISOString().split('T')[0] });
+    }
+    const remaining = 42 - cells.length;
+    for (let i = 1; i <= remaining; i++) {
+      cells.push({ day: i, isCurrentMonth: false, dateStr: '' });
+    }
+    return cells;
+  }, [currentMonth, currentYear]);
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 pb-32">
-      {/* Header & View Switcher */}
-      <div className="bg-slate-900/50 backdrop-blur-xl p-6 rounded-[2.5rem] border border-white/5 shadow-2xl space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-black font-serif text-white uppercase tracking-tight">Lịch PV Bắc Hoà</h2>
-            <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.3em] mt-1">{monthYearLabel}</p>
+    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in pb-24 lg:pb-16 px-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-1">
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <h2 className="sacred-title text-3xl font-bold text-slate-900 italic leading-none uppercase">Lịch Phụng Vụ & Công Tác</h2>
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] italic mt-1">Giáo Xứ Bắc Hòa • Hiệp Thông Phụng Vụ</p>
           </div>
           
-          <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 self-start">
-            {[
-              { mode: 'MONTH', icon: <CalendarIcon size={16} />, label: 'Tháng' },
-              { mode: 'WEEK', icon: <CalendarRange size={16} />, label: 'Tuần' },
-              { mode: 'LIST', icon: <ListIcon size={16} />, label: 'Ds' },
-            ].map((v) => (
-              <button
-                key={v.mode}
-                onClick={() => setViewMode(v.mode as ViewMode)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${
-                  viewMode === v.mode ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'
+          <div className="flex p-1 bg-slate-200/40 rounded-xl w-fit border border-slate-200/50 backdrop-blur-sm">
+            {(['MONTH', 'WEEK', 'DAY'] as ViewType[]).map((v) => (
+              <button 
+                key={v}
+                onClick={() => setViewType(v)}
+                className={`px-6 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+                  viewType === v ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-100' : 'text-slate-400 hover:text-slate-600'
                 }`}
               >
-                {v.icon}
-                <span className="hidden sm:inline">{v.label}</span>
+                {v === 'MONTH' ? <LayoutGrid size={14} /> : v === 'WEEK' ? <List size={14} /> : <CalendarIcon size={14} />}
+                {v === 'MONTH' ? 'Tháng' : v === 'WEEK' ? 'Tuần' : 'Ngày'}
               </button>
             ))}
           </div>
         </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex gap-2">
-            <button onClick={handlePrev} className="p-3 bg-white/5 rounded-xl text-white hover:bg-white/10 active:scale-90 transition-all border border-white/5">
-              <ChevronLeft size={20} />
-            </button>
-            <button onClick={() => setCurrentDate(new Date(2026, 0, 1))} className="px-5 py-3 bg-white/5 rounded-xl text-[10px] font-black text-white uppercase tracking-widest border border-white/5">
-              T1/2026
-            </button>
-            <button onClick={handleNext} className="p-3 bg-white/5 rounded-xl text-white hover:bg-white/10 active:scale-90 transition-all border border-white/5">
-              <ChevronRight size={20} />
-            </button>
-          </div>
-          <button 
-            onClick={() => { setEditingEvent({ id: Date.now().toString(), date: selectedDate || new Date().toISOString().split('T')[0], time: '19:30', massName: '', type: 'MASS', location: 'Nhà thờ' }); setIsModalOpen(true); }}
-            className="p-3 bg-blue-600 text-white rounded-xl shadow-xl shadow-blue-900/20 active:scale-90 transition-all flex items-center gap-2 px-6"
-          >
-            <Plus size={20} strokeWidth={3} />
-            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Thêm lịch</span>
-          </button>
+        
+        <div className="flex flex-wrap gap-2">
+           <div className="flex items-center bg-white border border-slate-200 rounded-2xl shadow-sm p-1">
+              <button onClick={() => handleNavigate(-1)} className="p-3 hover:bg-slate-50 text-slate-400 hover:text-amberGold transition-all rounded-xl"><ChevronLeft size={18} /></button>
+              <div className="px-6 py-2 text-[10px] font-black text-slate-900 uppercase tracking-widest text-center min-w-[160px]">
+                 {viewType === 'MONTH' ? `Tháng ${currentMonth} • ${currentYear}` : 
+                  viewType === 'WEEK' ? `Tuần ${Math.ceil(currentDate.getDate() / 7)} • Th.${currentMonth}` :
+                  currentDate.toLocaleDateString('vi-VN')}
+              </div>
+              <button onClick={() => handleNavigate(1)} className="p-3 hover:bg-slate-50 text-slate-400 hover:text-amberGold transition-all rounded-xl"><ChevronRight size={18} /></button>
+           </div>
+           <button onClick={() => { setEditingEvent(null); setIsModalOpen(true); }} className="active-pill px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg transition-transform active:scale-95">
+             Lập lịch mới <Plus size={18} />
+           </button>
         </div>
       </div>
 
-      {/* Calendar View */}
-      {viewMode === 'MONTH' && (
-        <div className="space-y-6">
-          <div className="bg-slate-900/30 backdrop-blur-xl rounded-[2.5rem] border border-white/5 shadow-2xl overflow-hidden">
-            <div className="grid grid-cols-7 border-b border-white/5 bg-white/5">
-              {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((d, i) => (
-                <div key={d} className={`py-4 text-center text-[10px] font-black uppercase tracking-widest ${i === 0 ? 'text-rose-500' : 'text-slate-500'}`}>
-                  {d}
-                </div>
-              ))}
+      <div className="glass-card rounded-[3rem] p-6 md:p-8 border border-slate-100 shadow-sm bg-white/70 overflow-hidden">
+        {viewType === 'MONTH' && (
+          <div className="animate-fade-in">
+            <div className="grid grid-cols-7 gap-2 mb-4">
+               {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((day, i) => (
+                 <div key={day} className={`text-center text-[10px] font-black uppercase tracking-[0.3em] py-3 rounded-2xl ${i === 0 ? 'text-rose-500 bg-rose-50/50' : 'text-slate-400 bg-slate-50/50'}`}>
+                    {day}
+                 </div>
+               ))}
             </div>
-            <div className="grid grid-cols-7">
-              {calendarDays.map((dateObj, idx) => {
-                const hasEvents = scheduleItems.some(e => e.date === dateObj.fullDate);
-                const ordo = dateObj.fullDate ? getOrdoEventForDate(dateObj.fullDate) : null;
-                const isSelected = selectedDate === dateObj.fullDate;
-                const isToday = dateObj.fullDate === new Date().toISOString().split('T')[0];
+
+            <div className="grid grid-cols-7 gap-2 md:gap-3">
+              {calendarCells.map((cell, idx) => {
+                const ordo = ordoForMonth.find(o => o.date === cell.dateStr);
+                const dayEvents = events.filter(e => e.date === cell.dateStr);
+                const isToday = cell.dateStr === new Date().toISOString().split('T')[0];
+                const isSunday = idx % 7 === 0;
 
                 return (
-                  <button
-                    key={idx}
-                    onClick={() => dateObj.fullDate && setSelectedDate(dateObj.fullDate)}
-                    disabled={!dateObj.day}
-                    className={`h-20 sm:h-24 p-1 border-r border-b border-white/5 flex flex-col items-center justify-start relative transition-all group ${
-                      !dateObj.day ? 'bg-slate-950/20' : 'hover:bg-blue-600/10'
-                    } ${isSelected ? 'bg-blue-600/30 ring-inset ring-2 ring-blue-500/50' : ''} ${ordo?.isObligatory ? 'bg-blue-900/5' : ''}`}
+                  <div 
+                    key={idx} 
+                    onClick={() => { if (cell.dateStr) { setCurrentDate(new Date(cell.dateStr)); setViewType('DAY'); } }}
+                    className={`group p-2 md:p-3 rounded-2xl border flex flex-col justify-between h-24 md:h-36 transition-all hover:shadow-md cursor-pointer relative overflow-hidden ${
+                      !cell.isCurrentMonth ? 'opacity-20 pointer-events-none' : 
+                      isToday ? 'ring-2 ring-amberGold bg-amber-50 shadow-inner border-amber-200' : 'bg-white border-slate-50 hover:border-amberGold shadow-sm'
+                    }`}
                   >
-                    {dateObj.day && (
-                      <>
-                        <span className={`text-xs font-black mb-1 ${isToday ? 'bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-lg shadow-lg' : isSelected ? 'text-white' : 'text-slate-400'}`}>
-                          {dateObj.day}
+                    <div className="flex justify-between items-start">
+                      <span className={`text-[10px] md:text-lg font-black ${isSunday ? 'text-rose-500' : 'text-slate-900'} ${isToday ? 'text-amberGold' : ''}`}>
+                        {cell.day}
+                      </span>
+                      {ordo && (
+                        <div className={`w-2.5 h-2.5 md:w-4 md:h-4 rounded-full border border-slate-200 shadow-sm ${getColorClass(ordo.liturgicalColor)}`}></div>
+                      )}
+                    </div>
+                    <div className="space-y-1 relative z-10 overflow-hidden">
+                      {ordo && (
+                        <span className={`block w-full text-[6px] md:text-[9px] font-bold truncate uppercase tracking-tighter italic leading-none ${isSunday ? 'text-rose-600' : 'text-slate-400'}`}>
+                          {ordo.massName}
                         </span>
-                        
-                        {/* Indicators for Ordo Rank */}
-                        <div className="flex flex-wrap justify-center gap-1 mt-auto pb-2">
-                          {ordo && (
-                            <div className={`w-2 h-2 rounded-full shadow-sm transition-transform group-hover:scale-125 ${
-                              ordo.rank === 'SOLEMNITY' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)] animate-pulse' : 
-                              ordo.rank === 'FEAST' ? 'bg-blue-500' : 
-                              ordo.rank === 'SUNDAY' ? 'bg-emerald-500' :
-                              'bg-amber-500'
-                            }`} title={ordo.massName}></div>
-                          )}
-                          {hasEvents && (
-                            <div className="w-2 h-2 bg-white rounded-full border border-blue-500"></div>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </button>
+                      )}
+                      {dayEvents.length > 0 && <div className="h-1 bg-amberGold rounded-full animate-pulse shadow-sm"></div>}
+                    </div>
+                  </div>
                 );
               })}
             </div>
           </div>
-
-          {/* Detailed Info for Selected Date */}
-          {selectedDate && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-bottom-4 duration-500">
-               {/* Ordo Section */}
-               <div className={`p-6 rounded-[2.5rem] border shadow-xl space-y-4 transition-all ${
-                  ordoForSelectedDate?.rank === 'SOLEMNITY' ? 'bg-rose-950/20 border-rose-500/20' : 'bg-slate-900/50 border-white/5'
-               }`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                       <BookOpen size={18} className={ordoForSelectedDate?.rank === 'SOLEMNITY' ? 'text-rose-400' : 'text-blue-400'} />
-                       <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Thông tin Phụng vụ</h3>
-                    </div>
-                    {ordoForSelectedDate?.isObligatory && (
-                      <span className="px-3 py-1 bg-blue-500/10 text-blue-400 rounded-full text-[8px] font-black uppercase tracking-widest border border-blue-500/20">Lễ Buộc</span>
-                    )}
-                  </div>
-                  
-                  {ordoForSelectedDate ? (
-                    <div className="space-y-3">
-                       <h4 className="text-lg font-black text-white leading-tight">{ordoForSelectedDate.massName}</h4>
-                       <div className="flex flex-wrap items-center gap-4">
-                          <div className="flex items-center gap-2">
-                             <div className={`w-3 h-3 rounded-full border border-white/10 ${
-                               ordoForSelectedDate.liturgicalColor === 'WHITE' ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.4)]' :
-                               ordoForSelectedDate.liturgicalColor === 'RED' ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]' :
-                               ordoForSelectedDate.liturgicalColor === 'VIOLET' ? 'bg-purple-500' :
-                               ordoForSelectedDate.liturgicalColor === 'GREEN' ? 'bg-emerald-500' : 'bg-amber-500'
-                             }`}></div>
-                             <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Màu {ordoForSelectedDate.liturgicalColor === 'WHITE' ? 'Trắng' : ordoForSelectedDate.liturgicalColor === 'RED' ? 'Đỏ' : ordoForSelectedDate.liturgicalColor === 'VIOLET' ? 'Tím' : ordoForSelectedDate.liturgicalColor === 'GREEN' ? 'Xanh' : 'Vàng'}</span>
-                          </div>
-                          <span className={`text-[10px] font-bold uppercase tracking-widest ${
-                            ordoForSelectedDate.rank === 'SOLEMNITY' ? 'text-rose-400' : 'text-slate-500'
-                          }`}>Bậc: {
-                            ordoForSelectedDate.rank === 'SOLEMNITY' ? 'Lễ Trọng' : 
-                            ordoForSelectedDate.rank === 'FEAST' ? 'Lễ Kính' : 
-                            ordoForSelectedDate.rank === 'SUNDAY' ? 'Chúa Nhật' : 'Lễ Nhớ'
-                          }</span>
-                       </div>
-                       {ordoForSelectedDate.note && (
-                         <div className="flex items-start gap-2 p-3 bg-white/5 rounded-xl border border-white/5">
-                            <Info size={12} className="text-blue-400 mt-0.5 shrink-0" />
-                            <p className="text-xs font-bold text-slate-400 italic leading-relaxed">{ordoForSelectedDate.note}</p>
-                         </div>
-                       )}
-                    </div>
-                  ) : (
-                    <div className="py-4 text-center">
-                       <p className="text-[10px] font-bold text-slate-600 uppercase italic">Ngày lễ thường trong tuần</p>
-                    </div>
-                  )}
-               </div>
-
-               {/* Activity Section */}
-               <div className="bg-slate-900/50 backdrop-blur-xl p-6 rounded-[2.5rem] border border-white/5 shadow-xl space-y-4">
-                  <div className="flex items-center gap-2">
-                     <CalendarDays size={18} className="text-emerald-400" />
-                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Hoạt động Ca đoàn</h3>
-                  </div>
-                  
-                  <div className="space-y-3 max-h-40 overflow-y-auto pr-2 scrollbar-hide">
-                    {eventsForSelectedDate.length === 0 ? (
-                      <div className="py-6 text-center border border-dashed border-white/5 rounded-2xl">
-                         <p className="text-[10px] font-black uppercase text-slate-600 tracking-widest italic">Nghỉ hoạt động</p>
-                      </div>
-                    ) : (
-                      eventsForSelectedDate.map(item => (
-                        <div key={item.id} className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between group hover:bg-white/10 transition-all">
-                           <div className="flex-1 min-w-0">
-                              <h5 className="text-xs font-black text-white truncate">{item.massName}</h5>
-                              <div className="flex gap-3 mt-1">
-                                <span className="text-[8px] font-bold text-slate-500 uppercase flex items-center gap-1"><Clock size={8}/> {item.time}</span>
-                                <span className="text-[8px] font-bold text-slate-500 uppercase truncate flex items-center gap-1"><MapPin size={8}/> {item.location}</span>
-                              </div>
-                           </div>
-                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => { setEditingEvent(item); setIsModalOpen(true); }} className="p-2 text-slate-400 hover:text-white"><UserPen size={14}/></button>
-                              <button onClick={() => setDeleteConfirmId(item.id)} className="p-2 text-rose-500/70 hover:text-rose-500"><Trash size={14}/></button>
-                           </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-               </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Week & List Views remain (Omitted for brevity but logic is kept) */}
-      {(viewMode === 'WEEK' || viewMode === 'LIST') && (
-        <div className="grid grid-cols-1 gap-4 px-1">
-          {filteredEvents.length === 0 ? (
-            <div className="py-20 text-center text-slate-600 font-black uppercase tracking-widest text-[10px] italic">Chưa có lịch phụng vụ mới</div>
-          ) : (
-            filteredEvents.map(item => (
-              <EventCard key={item.id} item={item} onEdit={setEditingEvent} onDelete={setDeleteConfirmId} onOpenModal={setIsModalOpen} />
-            ))
-          )}
-        </div>
-      )}
-
-      {/* CRUD Modals and Dialogs */}
-      {isModalOpen && editingEvent && (
-        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/80 backdrop-blur-md animate-in fade-in p-0">
-          <div className="bg-slate-950 rounded-t-[3rem] w-full max-w-lg shadow-2xl p-8 pb-12 space-y-8 border-t border-white/10 animate-in slide-in-from-bottom-full duration-300">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-black text-white uppercase tracking-tight font-serif">Kế Hoạch Hoạt Động</h3>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Cập nhật thông tin chi tiết</p>
-              </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-3 bg-white/5 rounded-full text-white active:scale-90 border border-white/5"><X size={20}/></button>
-            </div>
-            
-            <div className="space-y-5">
-               <div className="flex gap-2 p-1 bg-white/5 rounded-2xl border border-white/5">
-                  <button onClick={() => setEditingEvent({...editingEvent, type: 'MASS'})} className={`flex-1 py-4 rounded-xl font-black text-[10px] uppercase transition-all ${editingEvent.type === 'MASS' ? 'bg-blue-600 text-white shadow-xl' : 'text-slate-500 hover:text-white'}`}>Hát Lễ</button>
-                  <button onClick={() => setEditingEvent({...editingEvent, type: 'PRACTICE'})} className={`flex-1 py-4 rounded-xl font-black text-[10px] uppercase transition-all ${editingEvent.type === 'PRACTICE' ? 'bg-amber-500 text-white shadow-xl' : 'text-slate-500 hover:text-white'}`}>Tập Hát</button>
-               </div>
-               <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">Tên hoạt động</label>
-                  <input type="text" value={editingEvent.massName} onChange={e => setEditingEvent({...editingEvent, massName: e.target.value})} className="w-full p-4 bg-white/5 rounded-2xl text-white font-black border border-white/5 outline-none focus:ring-2 focus:ring-blue-600 transition-all placeholder:text-slate-700" placeholder="Vd: Lễ Hiển Linh, Tập hát Phục Sinh..." />
-               </div>
-               <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                     <label className="text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">Ngày</label>
-                     <input type="date" value={editingEvent.date} onChange={e => setEditingEvent({...editingEvent, date: e.target.value})} className="w-full p-4 bg-white/5 rounded-2xl text-white font-black border border-white/5 outline-none" />
-                  </div>
-                  <div className="space-y-1">
-                     <label className="text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">Giờ</label>
-                     <input type="time" value={editingEvent.time} onChange={e => setEditingEvent({...editingEvent, time: e.target.value})} className="w-full p-4 bg-white/5 rounded-2xl text-white font-black border border-white/5 outline-none" />
-                  </div>
-               </div>
-               <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-500 uppercase ml-2 tracking-widest">Địa điểm</label>
-                  <input type="text" value={editingEvent.location} onChange={e => setEditingEvent({...editingEvent, location: e.target.value})} className="w-full p-4 bg-white/5 rounded-2xl text-white font-black border border-white/5 outline-none focus:ring-2 focus:ring-blue-600 transition-all" />
-               </div>
-            </div>
-            
-            <div className="flex gap-4">
-               <button onClick={() => setIsModalOpen(false)} className="flex-1 py-5 bg-white/5 text-white rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all border border-white/5">Hủy</button>
-               <button onClick={handleSave} className="flex-[2] py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Lưu Kế Hoạch</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {deleteConfirmId && (
-        <div className="fixed inset-0 z-[250] flex items-end justify-center bg-black/90 backdrop-blur-md p-0 animate-in fade-in">
-          <div className="bg-slate-950 rounded-t-[3rem] w-full max-w-lg p-10 pb-12 space-y-8 shadow-2xl border-t border-rose-500/20 animate-in slide-in-from-bottom-full duration-300">
-            <div className="flex flex-col items-center text-center space-y-4">
-               <div className="w-20 h-20 bg-rose-500/10 rounded-full flex items-center justify-center text-rose-500">
-                  <AlertCircle size={48} strokeWidth={2.5} />
-               </div>
-               <h3 className="text-2xl font-black text-white leading-tight">Hủy lịch hoạt động?</h3>
-               <p className="text-sm font-bold text-slate-500 px-4 leading-relaxed">Thông tin lịch lễ/tập này sẽ bị gỡ vĩnh viễn khỏi hệ thống.</p>
-            </div>
-            <div className="flex flex-col gap-3">
-               <button onClick={confirmDelete} className="w-full py-5 bg-rose-500 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-rose-900/40 active:scale-95 transition-all">Xác nhận xóa</button>
-               <button onClick={() => setDeleteConfirmId(null)} className="w-full py-5 bg-white/5 text-white rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all border border-white/5">Quay lại</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-interface EventCardProps {
-  item: ScheduleEvent;
-  compact?: boolean;
-  onEdit: (e: ScheduleEvent) => void;
-  onDelete: (id: string) => void;
-  onOpenModal: (o: boolean) => void;
-}
-
-const EventCard: React.FC<EventCardProps> = ({ item, compact, onEdit, onDelete, onOpenModal }) => {
-  return (
-    <div className={`p-6 rounded-[2.5rem] border transition-all duration-500 relative overflow-hidden group ${
-      item.type === 'MASS' 
-        ? 'bg-slate-900/50 backdrop-blur-xl border-white/5 shadow-2xl hover:border-blue-500/30' 
-        : 'bg-amber-500/5 backdrop-blur-xl border-amber-500/10 shadow-lg hover:border-amber-500/30'
-    }`}>
-      <div className="flex items-center justify-between mb-4">
-        {!compact && (
-          <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest ${
-            item.type === 'MASS' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-          }`}>
-            {item.date}
-          </span>
         )}
-        <div className={`flex gap-2 ${compact ? 'ml-auto' : ''}`}>
-           <button onClick={() => { onEdit(item); onOpenModal(true); }} className="p-2.5 bg-white/5 rounded-xl text-slate-400 hover:text-white active:scale-90 transition-all border border-white/5" title="Sửa">
-              <UserPen size={18}/>
-           </button>
-           <button onClick={() => onDelete(item.id)} className="p-2.5 bg-rose-500/5 rounded-xl text-rose-500/70 hover:text-rose-500 active:scale-90 transition-all border border-rose-500/10" title="Xóa">
-              <Trash size={18}/>
-           </button>
+
+        {viewType === 'WEEK' && (
+          <div className="animate-fade-in space-y-4">
+             {(() => {
+                const startOfWeek = new Date(currentDate);
+                startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+                return Array.from({ length: 7 }).map((_, i) => {
+                  const d = new Date(startOfWeek);
+                  d.setDate(startOfWeek.getDate() + i);
+                  const dateStr = d.toISOString().split('T')[0];
+                  const ordo = getOrdoForMonth(d.getMonth()+1, d.getFullYear()).find(o => o.date === dateStr);
+                  const dayEvents = events.filter(e => e.date === dateStr);
+                  const isToday = dateStr === new Date().toISOString().split('T')[0];
+                  const isSunday = i === 0;
+
+                  return (
+                    <div key={dateStr} className={`glass-card p-5 rounded-3xl border border-slate-100 transition-all flex flex-col md:flex-row md:items-center gap-6 ${isToday ? 'ring-2 ring-amberGold bg-amber-50/50' : 'bg-white'}`}>
+                       <div className={`w-14 h-14 md:w-20 md:h-20 rounded-2xl flex flex-col items-center justify-center text-white shrink-0 shadow-lg ${isSunday ? 'bg-rose-500' : 'bg-slate-900'}`}>
+                          <span className="text-xl md:text-3xl font-black">{d.getDate()}</span>
+                          <span className="text-[8px] font-black uppercase opacity-60">Th.{d.getMonth()+1}</span>
+                       </div>
+                       <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                             <h3 className={`text-[15px] font-black leading-tight ${isSunday ? 'text-rose-600' : 'text-slate-800'}`}>
+                               {ordo?.massName || 'Ngày Thường'}
+                             </h3>
+                             {ordo?.liturgicalColor && <div className={`w-3 h-3 rounded-full border border-slate-100 ${getColorClass(ordo.liturgicalColor)}`}></div>}
+                          </div>
+                          <div className="space-y-2">
+                             {dayEvents.length > 0 ? dayEvents.map(e => (
+                               <div key={e.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100 group">
+                                  <div className="flex items-center gap-3 text-[11px] font-black text-slate-600 uppercase tracking-widest">
+                                     <Clock size={14} className="text-amberGold" /> {e.time} • {e.massName}
+                                  </div>
+                                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                     <button onClick={() => handleEdit(e)} className="p-2 text-slate-300 hover:text-amberGold"><Edit2 size={14}/></button>
+                                     <button onClick={() => deleteEvent(e.id)} className="p-2 text-slate-300 hover:text-rose-500"><Trash2 size={14}/></button>
+                                  </div>
+                               </div>
+                             )) : <span className="text-[10px] font-bold text-slate-300 uppercase italic">Chưa ghi nhận công tác phụng vụ</span>}
+                          </div>
+                       </div>
+                    </div>
+                  );
+                });
+             })()}
+          </div>
+        )}
+
+        {viewType === 'DAY' && (
+          <div className="animate-fade-in py-6 max-w-4xl mx-auto px-4">
+             {(() => {
+                const dateStr = currentDate.toISOString().split('T')[0];
+                const ordo = getOrdoForMonth(currentDate.getMonth()+1, currentDate.getFullYear()).find(o => o.date === dateStr) || { massName: 'Ngày Thường', liturgicalColor: 'GREEN' };
+                const dayEvents = events.filter(e => e.date === dateStr);
+                const isSunday = currentDate.getDay() === 0;
+
+                return (
+                  <div className="space-y-10">
+                    <div className="flex flex-col md:flex-row gap-10 items-start md:items-center">
+                       <div className={`w-32 h-32 md:w-44 md:h-44 rounded-[3rem] flex flex-col items-center justify-center text-white shadow-2xl border-4 border-white shrink-0 ${isSunday ? 'bg-rose-500' : 'bg-slate-900'}`}>
+                          <span className="text-5xl md:text-7xl font-black">{currentDate.getDate()}</span>
+                          <span className="text-[12px] md:text-[14px] font-black uppercase opacity-60">Tháng {currentMonth}</span>
+                       </div>
+                       <div className="space-y-4">
+                          <h2 className="sacred-title text-4xl md:text-6xl font-bold text-slate-900 italic leading-tight">{ordo.massName}</h2>
+                          <div className={`px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white shadow-sm ring-2 ring-white w-fit ${getColorClass(ordo.liturgicalColor as any)}`}>
+                             Áo Lễ {(ordo.liturgicalColor as string).toUpperCase()}
+                          </div>
+                       </div>
+                    </div>
+                    <div className="space-y-6 pt-10 border-t border-slate-50">
+                       <div className="flex items-center justify-between">
+                          <h3 className="text-[12px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-4">
+                            <Clock size={24} className="text-amberGold" /> Công Tác Cộng Đoàn
+                          </h3>
+                       </div>
+                       {dayEvents.length > 0 ? (
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {dayEvents.map(e => (
+                              <div key={e.id} className="glass-card p-6 rounded-[2rem] border border-slate-100 flex flex-col justify-between group bg-white shadow-sm hover:border-amberGold transition-all">
+                                 <div className="flex items-start justify-between">
+                                    <div className="p-4 bg-amber-50 text-amberGold rounded-2xl">
+                                       <Sun size={24} />
+                                    </div>
+                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                       <button onClick={() => handleEdit(e)} className="p-2 text-slate-300 hover:text-amberGold"><Edit2 size={18}/></button>
+                                       <button onClick={() => deleteEvent(e.id)} className="p-2 text-slate-300 hover:text-rose-500"><Trash2 size={18}/></button>
+                                    </div>
+                                 </div>
+                                 <div className="mt-4">
+                                    <h4 className="sacred-title text-[18px] font-bold text-slate-800 leading-tight italic">{e.massName}</h4>
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase mt-2 italic flex items-center gap-2"><MapPin size={14} className="text-rose-400"/> {e.time} • {e.location}</p>
+                                 </div>
+                              </div>
+                            ))}
+                         </div>
+                       ) : <div className="py-20 text-center rounded-[2rem] border-dashed border-2 border-slate-100 text-slate-300 text-[12px] font-black uppercase tracking-widest italic">Chưa có công tác hôm nay</div>}
+                    </div>
+                  </div>
+                );
+             })()}
+          </div>
+        )}
+      </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => { setIsModalOpen(false); setEditingEvent(null); }}></div>
+          <div className="glass-card w-full max-w-lg rounded-[2.5rem] p-8 relative z-10 bg-white shadow-2xl animate-in zoom-in-95">
+             <div className="flex justify-between items-center mb-6">
+               <h3 className="sacred-title text-2xl font-bold text-slate-900 italic">{editingEvent ? 'Cập Nhật Lịch' : 'Lập Lịch Mới'}</h3>
+               <button onClick={() => { setIsModalOpen(false); setEditingEvent(null); }} className="p-2 text-slate-400"><X size={24} /></button>
+             </div>
+             <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tên công tác</label>
+                    <input type="text" required value={form.massName} onChange={e => setForm({...form, massName: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-bold outline-none" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ngày</label>
+                    <input type="date" required value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-bold outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Giờ</label>
+                    <input type="time" required value={form.time} onChange={e => setForm({...form, time: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-bold outline-none" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Địa điểm</label>
+                    <input type="text" value={form.location} onChange={e => setForm({...form, location: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-bold outline-none" placeholder="VD: Nhà thờ chính" />
+                </div>
+                <button type="submit" className="w-full py-4 active-pill rounded-xl font-black text-[11px] uppercase tracking-widest shadow-lg mt-4">{editingEvent ? 'Lưu Thay Đổi' : 'Xác Nhận Lập Lịch'}</button>
+             </form>
+          </div>
         </div>
-      </div>
-      
-      <div className="flex gap-4">
-         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-           item.type === 'MASS' ? 'bg-blue-500/10 text-blue-500' : 'bg-amber-500/10 text-amber-500'
-         }`}>
-            {item.type === 'MASS' ? <CalendarDays size={24}/> : <CalendarIcon size={24}/>}
-         </div>
-         <div className="flex-1">
-            <h4 className="text-lg font-black text-white leading-tight mb-3 group-hover:text-blue-400 transition-colors">{item.massName}</h4>
-            <div className="flex flex-wrap gap-4">
-              <div className="flex items-center gap-2 text-slate-400 text-[9px] font-black uppercase tracking-widest">
-                <Clock size={14} className="text-blue-500" /> {item.time}
-              </div>
-              <div className="flex items-center gap-2 text-slate-400 text-[9px] font-black uppercase tracking-widest">
-                <MapPin size={14} className="text-blue-500" /> {item.location}
-              </div>
-            </div>
-         </div>
-      </div>
+      )}
     </div>
   );
 };

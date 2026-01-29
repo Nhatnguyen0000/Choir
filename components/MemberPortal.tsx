@@ -1,252 +1,157 @@
 
 import React, { useState, useMemo } from 'react';
-import { 
-  Calendar, 
-  Music, 
-  User, 
-  MessageSquare, 
-  Clock, 
-  AlertCircle, 
-  CheckCircle2, 
-  ChevronRight,
-  Heart,
-  Sparkles,
-  BookOpen,
-  History,
-  Info,
-  CalendarDays,
-  X // Fix: Added missing X icon import
-} from 'lucide-react';
-import { Member, ScheduleEvent, DailyAttendance, AppView } from '../types';
+import { Sparkles, MapPin, Check, BookOpen, X, Music, UserCheck, Heart } from 'lucide-react';
+import { Member, ScheduleEvent } from '../types';
+import { useMemberStore } from '../store';
 
 interface MemberPortalProps {
   currentUser: Member;
   scheduleItems: ScheduleEvent[];
-  attendanceData: DailyAttendance[];
-  setAttendanceData: React.Dispatch<React.SetStateAction<DailyAttendance[]>>;
   onSwitchToAdmin: () => void;
 }
 
-const MemberPortal: React.FC<MemberPortalProps> = ({ 
-  currentUser, 
-  scheduleItems, 
-  attendanceData,
-  setAttendanceData,
-  onSwitchToAdmin
-}) => {
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [reportReason, setReportReason] = useState('');
-  const [reportType, setReportType] = useState<'ABSENT' | 'LATE'>('ABSENT');
+const MemberPortal: React.FC<MemberPortalProps> = ({ currentUser, scheduleItems, onSwitchToAdmin }) => {
+  const { attendanceData, updateAttendance } = useMemberStore();
+  const [showToast, setShowToast] = useState(false);
 
   const myStats = useMemo(() => {
     const myRecords = attendanceData.flatMap(d => d.records).filter(r => r.memberId === currentUser.id);
-    const present = myRecords.filter(r => r.status === 'PRESENT').length;
-    const late = myRecords.filter(r => r.status === 'LATE').length;
-    const total = myRecords.length || 1;
-    const rate = Math.round(((present + late * 0.7) / total) * 100);
-    return { present, late, total, rate };
+    const presentCount = myRecords.filter(r => r.status === 'PRESENT').length;
+    const totalCount = myRecords.length || 0;
+    const rate = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 100;
+    return { present: presentCount, total: totalCount, rate };
   }, [attendanceData, currentUser.id]);
 
-  const handleReportAbsence = () => {
-    if (!selectedEventId) return;
-    const event = scheduleItems.find(s => s.id === selectedEventId);
-    if (!event) return;
-
-    setAttendanceData(prev => {
-      const existingIdx = prev.findIndex(d => d.date === event.date);
-      if (existingIdx >= 0) {
-        const newData = [...prev];
-        const recordIdx = newData[existingIdx].records.findIndex(r => r.memberId === currentUser.id);
-        const newRecord = { 
-          memberId: currentUser.id, 
-          status: reportType, 
-          reason: reportReason,
-          reportedAt: new Date().toISOString()
-        };
-        if (recordIdx >= 0) newData[existingIdx].records[recordIdx] = newRecord;
-        else newData[existingIdx].records.push(newRecord);
-        return newData;
-      } else {
-        return [...prev, {
-          date: event.date,
-          records: [{ 
-            memberId: currentUser.id, 
-            status: reportType, 
-            reason: reportReason,
-            reportedAt: new Date().toISOString() 
-          }]
-        }];
-      }
-    });
-    setIsReportModalOpen(false);
-    setReportReason('');
+  const handleQuickReport = (eventId: string, status: 'PRESENT' | 'ABSENT' | 'LATE') => {
+    updateAttendance(eventId, currentUser.id, status);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 pb-32">
-      {/* Hero Personal Section */}
-      <div className="bg-slate-900 rounded-[3rem] p-8 lg:p-10 text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full -mr-32 -mt-32 blur-[100px]"></div>
-        <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center font-black text-2xl shadow-xl shadow-blue-900/40">
-              {currentUser.name.split(' ').pop()?.[0]}
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Thành viên Ca Đoàn Bắc Hòa</p>
-              <h2 className="text-2xl font-black font-serif">Kính chào {currentUser.saintName} {currentUser.name}! 🙏</h2>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-             <div className="bg-white/5 border border-white/10 rounded-3xl p-4">
-                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">Chỉ số sứ vụ</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-blue-400">{myStats.rate}%</span>
-                  <span className="text-[8px] font-bold text-slate-500 uppercase">Chuyên cần</span>
-                </div>
-             </div>
-             <div className="bg-white/5 border border-white/10 rounded-3xl p-4">
-                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-2">Bổn mạng</p>
-                <div className="flex items-center gap-2">
-                  <Heart size={14} className="text-rose-500 fill-rose-500" />
-                  <span className="text-xs font-black uppercase tracking-tight">{currentUser.saintName || 'Hài Đồng'}</span>
-                </div>
-             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Upcoming Missions */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between px-2">
-          <h3 className="text-lg font-black font-serif text-slate-900">Lịch Sứ Vụ Sắp Tới</h3>
-          <button className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Xem tất cả</button>
-        </div>
-        
-        <div className="space-y-3">
-          {scheduleItems.slice(0, 3).map((event) => {
-            const myRecord = attendanceData.find(d => d.date === event.date)?.records.find(r => r.memberId === currentUser.id);
-            const isReported = myRecord?.status === 'ABSENT' || myRecord?.status === 'LATE';
-
-            return (
-              <div key={event.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest">
-                        {event.date}
-                      </span>
-                      {isReported && (
-                        <span className={`px-3 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest ${myRecord?.status === 'ABSENT' ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
-                          {myRecord?.status === 'ABSENT' ? 'Đã báo vắng' : 'Đã báo muộn'}
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="font-bold text-slate-900 text-sm leading-snug">{event.massName}</h4>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-2xl text-slate-400">
-                    <Calendar size={20} />
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => {
-                      setSelectedEventId(event.id);
-                      setIsReportModalOpen(true);
-                    }}
-                    className="flex-1 py-3.5 bg-slate-900 text-white rounded-2xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg"
-                  >
-                    Báo vắng / muộn
-                  </button>
-                  <button className="flex-1 py-3.5 bg-blue-50 text-blue-700 rounded-2xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all border border-blue-100">
-                    Xem bài hát
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* AI Inspiration Section */}
-      <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white relative overflow-hidden group">
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-4">
-            <Sparkles size={20} className="text-indigo-300 animate-pulse" />
-            <h4 className="text-[10px] font-black uppercase tracking-widest">Góc Tâm Tình Ca Viên</h4>
-          </div>
-          <p className="font-serif italic text-lg leading-relaxed mb-6">
-            "Hãy hát mừng Chúa một bài ca mới, vì Người đã làm những việc lạ lùng."
-          </p>
-          <button className="w-full py-4 bg-white/10 hover:bg-white/20 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] border border-white/20 transition-all active:scale-95">
-            Tìm hiểu ý nghĩa lời ca
-          </button>
-        </div>
-        <Music size={120} className="absolute -bottom-10 -right-10 opacity-10 group-hover:scale-110 transition-transform duration-1000" />
-      </div>
-
-      {/* Footer Switch */}
-      <div className="text-center pt-8">
-         <button 
-           onClick={onSwitchToAdmin}
-           className="text-[10px] font-black text-slate-300 uppercase tracking-widest hover:text-slate-900 transition-colors"
-         >
-           Chuyển sang Ban Trị Sự (Admin)
-         </button>
-      </div>
-
-      {/* Report Modal */}
-      {isReportModalOpen && (
-        <div className="fixed inset-0 z-[120] flex items-end justify-center bg-slate-900/70 backdrop-blur-sm animate-in fade-in p-0">
-          <div className="bg-white rounded-t-[3rem] w-full max-w-lg shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full duration-500 flex flex-col p-8 space-y-6">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-xl font-black font-serif text-slate-900">Báo cáo Sứ vụ</h3>
-              <button onClick={() => setIsReportModalOpen(false)} className="p-2 bg-slate-50 rounded-full text-slate-400"><X size={20}/></button>
-            </div>
-
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setReportType('ABSENT')}
-                className={`flex-1 p-4 rounded-2xl border transition-all ${reportType === 'ABSENT' ? 'bg-rose-50 border-rose-500 text-rose-700' : 'bg-slate-50 border-slate-100 text-slate-400'}`}
-              >
-                <div className="flex flex-col items-center gap-2">
-                  <AlertCircle size={24} />
-                  <span className="text-[10px] font-black uppercase">Vắng mặt</span>
-                </div>
-              </button>
-              <button 
-                onClick={() => setReportType('LATE')}
-                className={`flex-1 p-4 rounded-2xl border transition-all ${reportType === 'LATE' ? 'bg-amber-50 border-amber-500 text-amber-700' : 'bg-slate-50 border-slate-100 text-slate-400'}`}
-              >
-                <div className="flex flex-col items-center gap-2">
-                  <Clock size={24} />
-                  <span className="text-[10px] font-black uppercase">Đi muộn</span>
-                </div>
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Lý do cụ thể</label>
-              <textarea 
-                value={reportReason}
-                onChange={(e) => setReportReason(e.target.value)}
-                placeholder="Vd: Đi học xa, Bận việc gia đình..."
-                className="w-full p-5 bg-slate-50 rounded-2xl border-none text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none"
-              />
-            </div>
-
-            <button 
-              onClick={handleReportAbsence}
-              className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all"
-            >
-              Gửi báo cáo cho Ban Trị Sự
-            </button>
+    <div className="space-y-6 animate-fade-in">
+      {showToast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] animate-in slide-in-from-top-4">
+          <div className="bg-emeraldGreen text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 border border-white/20 backdrop-blur-sm">
+            <Check size={18} strokeWidth={3} /> 
+            <span className="text-[11px] font-bold uppercase tracking-widest">Hiệp thông thành công!</span>
           </div>
         </div>
       )}
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+           <h1 className="sacred-title text-2xl md:text-3xl font-bold text-slate-900 italic">
+              Xin chào, {currentUser.name.split(' ').pop()}! <Sparkles className="text-amberGold inline-block ml-1" size={24} />
+           </h1>
+           <p className="text-slate-500 text-[11px] font-bold uppercase tracking-widest italic leading-none">Cầu chúc anh chị luôn hăng say Phụng sự Chúa</p>
+        </div>
+        <button onClick={onSwitchToAdmin} className="glass-button px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider text-slate-500">
+          Chuyển sang Quản trị
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="glass-card p-4 rounded-xl flex items-center justify-between border-slate-200">
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Tỉ lệ chuyên cần</p>
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight">{myStats.rate}%</h3>
+            </div>
+            <div className="w-10 h-10 bg-amber-50 text-amberGold rounded-lg flex items-center justify-center border border-amber-100 shadow-sm">
+              <Heart size={20} fill="currentColor" />
+            </div>
+        </div>
+        <div className="glass-card p-4 rounded-xl flex items-center justify-between border-slate-200">
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Buổi đã hiện diện</p>
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight">{myStats.present}</h3>
+            </div>
+            <div className="w-10 h-10 bg-blue-50 text-royalBlue rounded-lg flex items-center justify-center border border-blue-100 shadow-sm">
+              <UserCheck size={20} />
+            </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          <h3 className="text-[11px] font-bold text-slate-900 flex items-center gap-2 uppercase tracking-widest">
+            <div className="w-1 h-3.5 bg-amberGold rounded-full"></div> Lịch Hiệp Thông Của Anh Chị
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {scheduleItems.length === 0 ? (
+              <div className="col-span-full py-12 text-center glass-card rounded-xl text-slate-400 font-bold uppercase tracking-widest text-[11px] italic">
+                Chưa có lịch hoạt động mới
+              </div>
+            ) : (
+              scheduleItems.slice(0, 4).map((event) => (
+                <div key={event.id} className="glass-card p-5 rounded-xl flex flex-col justify-between group border-slate-200 bg-white/50 hover:border-amberGold transition-all">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div className="w-10 h-10 bg-white rounded-lg flex flex-col items-center justify-center border border-slate-100 shadow-sm">
+                        <span className="text-[14px] font-bold text-slate-900 leading-none">{new Date(event.date).getDate()}</span>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase">{new Date(event.date).toLocaleString('vi-VN', { month: 'short' })}</span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border ${event.type === 'MASS' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                        {event.type === 'MASS' ? 'Thánh Lễ' : 'Tập Hát'}
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="sacred-title text-[15px] font-bold text-slate-800 leading-tight mb-1 italic">{event.massName}</h4>
+                      <div className="flex items-center gap-2 text-slate-400">
+                         <MapPin size={12} className="text-amberGold" /> 
+                         <span className="text-[10px] font-medium truncate italic">{event.location}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex gap-2">
+                    <button 
+                      onClick={() => handleQuickReport(event.id, 'ABSENT')}
+                      className="flex-1 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[9px] font-bold uppercase border border-rose-100"
+                    >
+                      Báo Vắng
+                    </button>
+                    <button className="flex-1 py-1.5 rounded-lg bg-slate-900 text-white text-[9px] font-bold uppercase flex items-center justify-center gap-1.5">
+                      Xem bài <BookOpen size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="text-[11px] font-bold text-slate-900 flex items-center gap-2 uppercase tracking-widest">
+            <div className="w-1 h-3.5 bg-emeraldGreen rounded-full"></div> Hồ Sơ Ca Viên
+          </h3>
+          <div className="glass-card p-6 rounded-xl space-y-6 border-slate-200 bg-white relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-amberGold/5 rounded-full blur-[30px]"></div>
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="w-12 h-12 bg-amberGold rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md border-2 border-white transition-transform group-hover:rotate-6">
+                {currentUser.name[0]}
+              </div>
+              <div>
+                <h4 className="text-[15px] font-bold text-slate-900 leading-none">{currentUser.name}</h4>
+                <p className="text-[10px] text-slate-400 font-bold uppercase italic mt-1">{currentUser.saintName || 'Ca viên hiệp thông'}</p>
+              </div>
+            </div>
+            <div className="space-y-3 pt-4 border-t border-slate-50 relative z-10">
+               {[
+                 { label: 'Bổn phận', value: currentUser.role, icon: <Music size={14} className="text-amberGold"/> },
+                 { label: 'Ngày gia nhập', value: new Date(currentUser.joinDate).toLocaleDateString('vi-VN'), icon: <UserCheck size={14} className="text-emeraldGreen"/> },
+               ].map((item, i) => (
+                 <div key={i} className="flex justify-between items-center text-[11px]">
+                    <div className="flex items-center gap-2">
+                       {item.icon}
+                       <span className="text-slate-400 font-bold uppercase tracking-wider">{item.label}</span>
+                    </div>
+                    <span className="text-slate-800 font-bold">{item.value}</span>
+                 </div>
+               ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

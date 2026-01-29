@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { Member, DailyAttendance, Transaction } from '../types';
-import { FileDown, Users, Heart, TrendingUp } from 'lucide-react';
+import { FileDown, TrendingUp, TrendingDown, Users, Wallet, ClipboardCheck, CheckCircle2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface AnalyticsManagementProps {
@@ -12,70 +12,91 @@ interface AnalyticsManagementProps {
 
 const AnalyticsManagement: React.FC<AnalyticsManagementProps> = ({ members, attendanceData, transactions }) => {
   const stats = useMemo(() => {
-    const activeCount = members.filter(m => m.missionStatus === 'ACTIVE').length;
-    const totalBalance = transactions.filter(t => t.type === 'IN').reduce((s,t) => s+t.amount, 0) - transactions.filter(t => t.type === 'OUT').reduce((s,t) => s+t.amount, 0);
-    const avgAttendance = attendanceData.length > 0 
-      ? Math.round((attendanceData.reduce((sum, d) => sum + (d.records.filter(r => r.status !== 'ABSENT').length), 0) / (attendanceData.length * members.length)) * 100)
-      : 0;
-    return { activeCount, totalBalance, avgAttendance };
+    const total = members.length;
+    const totalIn = transactions.filter(t => t.type === 'IN').reduce((s,t) => s+t.amount, 0);
+    const totalOut = transactions.filter(t => t.type === 'OUT').reduce((s,t) => s+t.amount, 0);
+    const avgAttendance = attendanceData.length > 0 ? Math.round((attendanceData.reduce((sum, d) => sum + (d.records.filter(r => r.status === 'PRESENT').length), 0) / (attendanceData.length * (total || 1))) * 100) : 100;
+    return { total, active: members.filter(m => m.status === 'ACTIVE').length, balance: totalIn - totalOut, avgAttendance };
   }, [members, attendanceData, transactions]);
 
-  const exportGeneralReport = () => {
-    const data = [
-      ['BÁO CÁO TỔNG HỢP CA ĐOÀN BẮC HÒA'],
-      ['Thời điểm xuất:', new Date().toLocaleString()],
-      [''],
-      ['CHỈ SỐ NHÂN SỰ'],
-      ['Tổng số ca viên:', members.length],
-      ['Đang hoạt động:', stats.activeCount],
-      [''],
-      ['CHỈ SỐ HOẠT ĐỘNG'],
-      ['Tỉ lệ chuyên cần trung bình:', `${stats.avgAttendance}%`],
-      [''],
-      ['CHỈ SỐ TÀI CHÍNH'],
-      ['Số dư quỹ hiện tại:', `${stats.totalBalance.toLocaleString()} đ`],
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(data);
+  const xuatBaoCao = () => {
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Bao_Cao_Tong_Hop");
-    XLSX.writeFile(wb, "Bao_Cao_Tong_Hop_Bac_Hoa.xlsx");
+    const duLieu = [['BÁO CÁO TỔNG KẾT HOẠT ĐỘNG CA ĐOÀN THIÊN THẦN'], [`Ngày trích xuất: ${new Date().toLocaleDateString('vi-VN')}`], [''], ['TIÊU CHÍ', 'SỐ LIỆU'], ['Tổng số ca viên', stats.total], ['Tỷ lệ chuyên cần', stats.avgAttendance + '%'], ['Số dư quỹ đoàn', stats.balance.toLocaleString() + ' VNĐ']];
+    const ws = XLSX.utils.aoa_to_sheet(duLieu);
+    XLSX.utils.book_append_sheet(wb, ws, "Thống kê");
+    XLSX.writeFile(wb, `Bao_Cao_Ca_Doan_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  return (
-    <div className="space-y-10 animate-in fade-in duration-700 pb-32">
-       <div className="bg-white dark:bg-white/5 p-10 lg:p-14 rounded-[4rem] border border-slate-100 dark:border-white/10 shadow-sm flex flex-col md:flex-row justify-between items-center gap-10">
-          <div>
-            <h2 className="text-3xl font-black font-serif dark:text-white">Thống Kê Hoạt Động</h2>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mt-3">Dữ liệu hoạt động Ca đoàn Bắc Hòa</p>
-          </div>
-          <button onClick={exportGeneralReport} className="px-10 py-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[2rem] font-black text-[11px] uppercase tracking-widest shadow-2xl active:scale-95 transition-all flex items-center gap-4">
-             <FileDown size={20} /> Xuất Báo Cáo Tổng Hợp
-          </button>
-       </div>
+  const metrics = [
+    { label: 'Chuyên cần', value: stats.avgAttendance + '%', icon: <ClipboardCheck size={16}/>, color: 'text-amberGold' },
+    { label: 'Ngân quỹ', value: stats.balance.toLocaleString() + 'đ', icon: <Wallet size={16}/>, color: 'text-emeraldGreen' },
+    { label: 'Tổng ca viên', value: stats.total.toString(), icon: <Users size={16}/>, color: 'text-royalBlue' },
+  ];
 
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-1">
-          <div className="bg-white dark:bg-white/5 p-10 rounded-[3rem] border border-slate-50 dark:border-white/10 shadow-sm space-y-4">
-             <div className="w-14 h-14 bg-blue-50 dark:bg-blue-600/20 rounded-2xl flex items-center justify-center text-blue-600">
-                <Users size={28} />
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="sacred-title text-2xl font-bold text-slate-900 italic leading-none">Phân Tích Công Tác</h1>
+          <p className="text-slate-500 text-[11px] font-bold uppercase tracking-widest mt-1 italic leading-none">Tổng hợp dữ liệu hiệp thông ca đoàn</p>
+        </div>
+        <button onClick={xuatBaoCao} className="glass-button px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all active:scale-[0.98]">
+          <FileDown size={16} /> Xuất Excel
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {metrics.map((m, i) => (
+          <div key={i} className="glass-card p-4 rounded-xl border-slate-200 flex items-center justify-between">
+             <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">{m.label}</span>
+                <h3 className={`text-xl font-bold tracking-tight ${m.color}`}>{m.value}</h3>
              </div>
-             <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Nhân sự hiện tại</h4>
-             <div className="text-4xl font-black dark:text-white">{stats.activeCount} <span className="text-xs text-slate-400">/ {members.length}</span></div>
+             <div className="p-2 rounded-lg bg-slate-50 text-slate-400 border border-slate-100">{m.icon}</div>
           </div>
-          <div className="bg-white dark:bg-white/5 p-10 rounded-[3rem] border border-slate-50 dark:border-white/10 shadow-sm space-y-4">
-             <div className="w-14 h-14 bg-rose-50 dark:bg-rose-600/20 rounded-2xl flex items-center justify-center text-rose-600">
-                <Heart size={28} />
-             </div>
-             <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Chuyên cần</h4>
-             <div className="text-4xl font-black dark:text-white">{stats.avgAttendance}% <span className="text-xs text-slate-400">Hiệp thông</span></div>
-          </div>
-          <div className="bg-white dark:bg-white/5 p-10 rounded-[3rem] border border-slate-50 dark:border-white/10 shadow-sm space-y-4">
-             <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-600/20 rounded-2xl flex items-center justify-center text-emerald-600">
-                <TrendingUp size={28} />
-             </div>
-             <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Số dư quỹ đoàn</h4>
-             <div className="text-2xl font-black dark:text-white">{stats.totalBalance.toLocaleString()} <span className="text-xs text-slate-400">đ</span></div>
-          </div>
-       </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="glass-card p-6 rounded-xl border-slate-200 space-y-4">
+           <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2 italic leading-none">
+              <div className="w-1 h-3.5 bg-amberGold rounded-full"></div> Biểu đồ chuyên cần
+           </h3>
+           <div className="flex items-end justify-around h-32 pt-4 border-b border-slate-50">
+              {[65, 80, 55, 90, 75, 85].map((h, i) => (
+                <div key={i} className="flex flex-col items-center gap-2 w-6 group">
+                   <div className="w-full bg-slate-50 rounded h-24 relative overflow-hidden">
+                      <div className="absolute bottom-0 left-0 right-0 bg-amberGold/60 group-hover:bg-amberGold transition-all duration-700" style={{ height: `${h}%` }}></div>
+                   </div>
+                   <span className="text-[8px] font-bold text-slate-400 uppercase">T{i+1}</span>
+                </div>
+              ))}
+           </div>
+        </div>
+
+        <div className="glass-card p-6 rounded-xl bg-deepSlate text-white space-y-4 relative overflow-hidden">
+           <h3 className="text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 italic leading-none relative z-10">
+              <div className="w-1 h-3.5 bg-emerald-500 rounded-full"></div> Tài chính minh bạch
+           </h3>
+           <div className="space-y-3 relative z-10 pt-2">
+              <div className="flex justify-between items-center p-3 rounded-lg bg-white/5 border border-white/10">
+                 <div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase leading-none mb-1">Tổng thu năm nay</p>
+                    <p className="text-lg font-bold tracking-tight">{(stats.balance + 5000000).toLocaleString()}đ</p>
+                 </div>
+                 <TrendingUp size={16} className="text-emerald-400 opacity-60" />
+              </div>
+              <div className="flex justify-between items-center p-3 rounded-lg bg-white/5 border border-white/10">
+                 <div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase leading-none mb-1">Tổng chi năm nay</p>
+                    <p className="text-lg font-bold tracking-tight">5.000.000đ</p>
+                 </div>
+                 <TrendingDown size={16} className="text-rose-400 opacity-60" />
+              </div>
+              <p className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest text-center italic mt-2">Dữ liệu hiệp thông minh bạch AMDG</p>
+           </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,19 +1,9 @@
-
-import React, { useMemo, useState } from 'react';
+import React from 'react';
 import { AppView } from '../types';
-import { getCurrentLiturgicalColor } from '../services/ordoService';
 import { 
-  LayoutDashboard, 
-  CalendarDays, 
-  Users, 
-  Sparkles,
-  Music2,
-  Bell,
-  LibraryBig,
-  BarChart3,
-  X,
-  Info
+  Music2, Bell, CircleUser, LayoutDashboard, Users, Calendar, Library, Wallet, Sparkles, LogOut 
 } from 'lucide-react';
+import { useNotificationStore, useAuthStore } from '../store';
 
 interface LayoutProps {
   currentView: AppView;
@@ -22,104 +12,97 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }) => {
-  const [showNotifications, setShowNotifications] = useState(false);
-  const liturgicalColor = useMemo(() => getCurrentLiturgicalColor(), []);
+  const { unreadCount } = useNotificationStore();
+  const { logout } = useAuthStore();
 
-  const notifications = [
-    { id: 1, title: 'Chào mừng Ban Trị Sự', content: 'Cổng thông tin Bắc Hòa đã chuyển sang giao diện tối chuyên nghiệp.', time: 'Vừa xong' },
-    { id: 2, title: 'Lưu ý Phụng vụ', content: 'Hãy kiểm tra Ordo 2027 để cập nhật màu sắc phụng vụ chính xác.', time: '10 phút trước' }
+  const navItems = [
+    { id: AppView.DASHBOARD, label: 'Tổng quan', icon: <LayoutDashboard size={20} /> },
+    { id: AppView.SCHEDULE, label: 'Lịch lễ', icon: <Calendar size={20} /> },
+    { id: AppView.LIBRARY, label: 'Thánh nhạc', icon: <Library size={20} /> },
+    { id: AppView.MEMBERS, label: 'Ca viên', icon: <Users size={20} /> },
+    { id: AppView.FINANCE, label: 'Ngân quỹ', icon: <Wallet size={20} /> },
+    { id: AppView.AI_ASSISTANT, label: 'Trợ lý AI', icon: <Sparkles size={20} /> },
   ];
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-slate-950 text-slate-50 transition-colors duration-500">
-      {/* Header */}
-      <header className="h-16 lg:h-20 flex items-center justify-between px-6 bg-slate-950/80 backdrop-blur-2xl border-b border-white/5 z-[60]">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-600 rounded-xl text-white shadow-lg shadow-blue-900/40">
-            <Music2 size={20} />
+    <div className="min-h-screen flex flex-col bg-[#f1f5f9]">
+      <header className="sticky top-0 z-[100] px-4 py-3 md:px-6">
+        <div className="max-w-7xl mx-auto glass-card rounded-2xl px-4 py-2 flex items-center justify-between border-slate-200 shadow-lg bg-white/95">
+          <div onClick={() => setCurrentView(AppView.DASHBOARD)} className="flex items-center gap-3 cursor-pointer group">
+            <div className="w-9 h-9 bg-amberGold rounded-xl flex items-center justify-center text-white shadow-sm transition-transform group-hover:rotate-6">
+              <Music2 size={20} strokeWidth={2.5} />
+            </div>
+            <div className="flex flex-col">
+              <span className="sacred-title font-bold text-base text-slate-900 leading-none uppercase tracking-tighter">THIÊN THẦN</span>
+              <span className="text-[8px] uppercase tracking-[0.2em] font-black text-slate-400 mt-0.5 italic">Giáo xứ Bắc Hòa</span>
+            </div>
           </div>
-          <h1 className="text-lg font-black font-serif uppercase tracking-tight text-white">
-            CỔNG THÔNG TIN <span className="text-blue-500">BẮC HOÀ</span>
-          </h1>
-        </div>
-        <div className="flex items-center gap-4">
-           <button 
-             onClick={() => setShowNotifications(true)} 
-             className="relative p-2.5 bg-white/5 rounded-xl text-white active:scale-90 transition-transform border border-white/10"
-           >
-             <Bell size={24} />
-             <div className="absolute top-2 right-2 w-3 h-3 bg-rose-500 rounded-full border-2 border-slate-950"></div>
-           </button>
+
+          <nav className="hidden lg:flex items-center gap-2">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setCurrentView(item.id)}
+                className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border shadow-sm ${
+                  currentView === item.id 
+                    ? 'active-pill border-slate-900' 
+                    : 'glass-button text-slate-500 hover:text-slate-900 border-slate-100 bg-white/50'
+                }`}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-2">
+            <button className="p-2.5 rounded-xl glass-button text-slate-500 relative flex items-center justify-center hover:bg-slate-50 transition-all shadow-sm border-slate-100">
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-amberGold rounded-full border border-white"></span>
+              )}
+            </button>
+            <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block"></div>
+            <div className="flex items-center gap-2 pl-1 cursor-pointer hover:bg-slate-50 p-1.5 rounded-xl transition-all group">
+              <div className="w-8 h-8 bg-amber-50 rounded-xl flex items-center justify-center text-amberGold border border-amber-100 shadow-sm group-hover:bg-amberGold group-hover:text-white transition-all">
+                <CircleUser size={18} />
+              </div>
+              <button onClick={() => logout()} title="Rời khỏi" className="hidden lg:block text-slate-300 hover:text-rose-500 transition-colors">
+                <LogOut size={18} />
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-12 pb-32 scroll-smooth bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-900/10 via-slate-950 to-slate-950">
-        <div className="max-w-4xl mx-auto min-h-full">
-          {children}
-        </div>
+      <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 animate-fade-in pb-24 md:pb-6">
+        {children}
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-slate-950/90 backdrop-blur-3xl border-t border-white/5 px-2 py-2 safe-bottom flex justify-around items-center z-[100] shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
-        {[
-          { id: AppView.DASHBOARD, label: 'Tổng Quan', icon: <LayoutDashboard size={24} /> },
-          { id: AppView.SCHEDULE, label: 'Lịch PV', icon: <CalendarDays size={24} /> },
-          { id: AppView.MEMBERS, label: 'Ca Viên', icon: <Users size={24} /> },
-          { id: AppView.LIBRARY, label: 'Thanh Nhạc', icon: <LibraryBig size={24} /> },
-          { id: AppView.ANALYTICS, label: 'Thống Kê', icon: <BarChart3 size={24} /> },
-          { id: AppView.AI_ASSISTANT, label: 'AI', icon: <Sparkles size={24} /> },
-        ].map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setCurrentView(item.id)}
-            className={`flex flex-col items-center justify-center p-3 rounded-2xl transition-all duration-300 ${
-              currentView === item.id 
-                ? 'bg-blue-600 text-white scale-105 shadow-[0_0_30px_rgba(37,99,235,0.4)]' 
-                : 'text-slate-500 hover:text-white'
-            }`}
-          >
-            {item.icon}
-            <span className={`text-[8px] font-black uppercase mt-1 tracking-widest ${currentView === item.id ? 'block' : 'hidden'}`}>
-              {item.label}
-            </span>
-          </button>
-        ))}
-      </nav>
-
-      {/* Notification Center */}
-      {showNotifications && (
-        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/80 backdrop-blur-md p-0 animate-in fade-in">
-          <div className="bg-slate-900 rounded-t-[3rem] w-full max-w-lg p-10 pb-12 space-y-6 shadow-2xl border-t border-white/10 animate-in slide-in-from-bottom-full duration-300">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-2xl font-black text-white uppercase tracking-tight">Thông Báo Hoạt Động</h3>
-              <button onClick={() => setShowNotifications(false)} className="p-3 bg-white/5 rounded-full text-white active:scale-90 transition-all border border-white/10"><X size={24}/></button>
-            </div>
-            
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-              {notifications.map((note) => (
-                <div key={note.id} className="p-6 bg-white/5 rounded-[2rem] border border-white/5 flex gap-4 hover:bg-white/10 transition-colors">
-                  <div className="w-12 h-12 bg-blue-500/20 text-blue-400 rounded-2xl flex items-center justify-center shrink-0 border border-blue-500/20">
-                    <Info size={24} />
-                  </div>
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-black text-white leading-tight">{note.title}</h4>
-                    <p className="text-xs font-bold text-slate-400 leading-relaxed">{note.content}</p>
-                    <span className="text-[9px] font-black text-slate-600 uppercase mt-2 block">{note.time}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            <button 
-              onClick={() => setShowNotifications(false)} 
-              className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-blue-900/40"
+      <nav className="fixed bottom-0 left-0 right-0 lg:hidden bg-white/95 backdrop-blur-xl border-t border-slate-100 px-1 py-1 flex items-center justify-around z-[1000] pb-env(safe-area-inset-bottom)">
+        {navItems.slice(0, 5).map((item) => {
+          const isActive = currentView === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setCurrentView(item.id)}
+              className={`flex-1 flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all gap-1.5 relative ${
+                isActive ? 'text-amberGold' : 'text-slate-300'
+              }`}
             >
-              Đã hiểu
+              <div className={`p-2 rounded-xl transition-all duration-300 ${isActive ? 'bg-amberGold text-white shadow-lg scale-110 -translate-y-1' : ''}`}>
+                {React.cloneElement(item.icon as React.ReactElement, { 
+                  size: 20, 
+                  strokeWidth: isActive ? 2.5 : 2 
+                })}
+              </div>
+              <span className={`text-[8px] font-black uppercase tracking-tighter transition-opacity ${isActive ? 'opacity-100 font-black' : 'opacity-60'}`}>
+                {item.label}
+              </span>
             </button>
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </nav>
     </div>
   );
 };

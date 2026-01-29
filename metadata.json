@@ -1,6 +1,6 @@
 {
-  "name": "Ca Đoàn",
-  "description": "Ứng dụng quản lý ca đoàn chuyên nghiệp dành cho Ban Trị Sự giáo xứ, hỗ trợ lập lịch, chọn bài hát phụng vụ và quản lý nhân sự.",
+  "name": "Ca Đoàn Thiên Thần",
+  "description": "Hệ thống hiệp thông Thánh Nhạc Phụng Vụ dành riêng cho Ca Đoàn Thiên Thần - Giáo xứ Bắc Hòa.",
   "requestFramePermissions": [
     "camera",
     "microphone"

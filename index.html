@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
-<html lang="vi" class="dark">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CỔNG THÔNG TIN BẮC HOÀ</title>
+    <title>CA ĐOÀN THIÊN THẦN - Quản Trị Phụng Vụ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -12,68 +11,95 @@
         theme: {
           extend: {
             colors: {
-              dark: {
-                950: '#020617',
-                900: '#0f172a',
-                800: '#1e293b'
-              }
+              amberGold: '#FBBF24',
+              royalBlue: '#2563EB',
+              emeraldGreen: '#10B981',
+              crimsonRed: '#DC2626',
+              liturgicalViolet: '#7C3AED',
+              deepSlate: '#0F172A',
+              offWhite: '#F8FAFC'
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Lora', 'serif'],
             }
           }
         }
       }
     </script>
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700;800;900&family=Lora:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --font-sans: 'Be Vietnam Pro', sans-serif;
-            --font-serif: 'Lora', serif;
-        }
+        :root { font-size: 14px; } /* Kích thước chuẩn cho web app quản trị */
         body {
-            font-family: var(--font-sans);
-            background-color: #020617; /* Slate 950 */
-            color: #f8fafc; /* Slate 50 */
+            font-family: 'Inter', sans-serif;
+            background: #f1f5f9;
+            color: #1e293b;
             -webkit-font-smoothing: antialiased;
-            text-rendering: optimizeLegibility;
-            overscroll-behavior-y: contain;
         }
-        .font-serif { font-family: var(--font-serif); }
-        .font-sans { font-family: var(--font-sans); }
-
-        ::-webkit-scrollbar { width: 0px; display: none; }
+        .sacred-title { font-family: 'Lora', serif; letter-spacing: -0.01em; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .glass-button {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+        }
+        .glass-button:hover:not(:disabled) { border-color: #FBBF24; background: #fffcf0; }
+        .active-pill { background: #0f172a; color: #ffffff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .table-row-hover:hover { background: #f8fafc !important; }
         
-        .safe-bottom {
-            padding-bottom: env(safe-area-inset-bottom);
-        }
-
-        .bottom-sheet {
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        /* Cải thiện hiển thị mobile */
+        @media (max-width: 640px) {
+            :root { font-size: 13px; }
+            .mobile-bottom-nav {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(10px);
+                border-top: 1px solid #e2e8f0;
+                display: flex;
+                justify-content: space-around;
+                padding: 8px 0;
+                z-index: 1000;
+                padding-bottom: env(safe-area-inset-bottom);
+            }
         }
         
-        /* Hiệu ứng kính */
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
+        /* Hiệu ứng chuyển trang mượt mà */
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
     </style>
 <script type="importmap">
 {
   "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "@google/genai": "https://esm.sh/@google/genai@^1.37.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.462.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.38.0",
+    "react-dom": "https://esm.sh/react-dom@^19.0.0",
+    "react": "https://esm.sh/react@^19.0.0",
+    "zustand": "https://esm.sh/zustand@^5.0.1",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5",
+    "react-markdown": "https://esm.sh/react-markdown@^10.0.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
     "vite": "https://esm.sh/vite@^7.3.1",
-    "react-markdown": "https://esm.sh/react-markdown@^10.1.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "xlsx": "https://esm.sh/xlsx@^0.18.5"
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "zustand/": "https://esm.sh/zustand@^5.0.10/"
   }
 }
 </script>
 </head>
-<body class="selection:bg-blue-900 selection:text-blue-100">
+<body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
 </body>

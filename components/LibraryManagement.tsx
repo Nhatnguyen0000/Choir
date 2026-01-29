@@ -1,169 +1,157 @@
 
 import React, { useState, useMemo } from 'react';
-import { Search, Plus, Trash, UserPen, Music, FileText, Link2, X, AlertCircle } from 'lucide-react';
+import { Search, Plus, Music, X, Edit2, Trash2, Heart, Info, Tag, ChevronRight } from 'lucide-react';
+import { useLibraryStore } from '../store';
 import { Song } from '../types';
 
-interface LibraryManagementProps {
-  songs: Song[];
-  setSongs: React.Dispatch<React.SetStateAction<Song[]>>;
-}
-
-const LibraryManagement: React.FC<LibraryManagementProps> = ({ songs, setSongs }) => {
+const LibraryManagement: React.FC = () => {
+  const { songs, addSong, updateSong, deleteSong } = useLibraryStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSong, setEditingSong] = useState<Song | null>(null);
-  const [viewingLyrics, setViewingLyrics] = useState<Song | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  const filteredSongs = useMemo(() => songs.filter(s => 
-    s.title.toLowerCase().includes(searchTerm.toLowerCase()) || s.composer.toLowerCase().includes(searchTerm.toLowerCase())
+  const [form, setForm] = useState<Partial<Song>>({
+    title: '', composer: '', category: 'Nhập lễ', liturgicalSeasons: [], isFamiliar: false, experienceNotes: ''
+  });
+
+  const filtered = useMemo(() => songs.filter(s => 
+    s.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    s.composer.toLowerCase().includes(searchTerm.toLowerCase())
   ), [songs, searchTerm]);
 
-  const handleSave = () => {
-    if (!editingSong || !editingSong.title.trim()) return;
-    setSongs(prev => {
-      const exists = prev.find(s => s.id === editingSong.id);
-      if (exists) return prev.map(s => s.id === editingSong.id ? editingSong : s);
-      return [editingSong, ...prev];
-    });
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.title) return;
+    if (editingSong) {
+      updateSong({ ...editingSong, ...form } as Song);
+    } else {
+      addSong({ ...form as Song, id: `s-${Date.now()}` });
+    }
     setIsModalOpen(false);
     setEditingSong(null);
+    setForm({ title: '', composer: '', category: 'Nhập lễ', liturgicalSeasons: [], isFamiliar: false, experienceNotes: '' });
   };
 
-  const confirmDelete = () => {
-    if (deleteConfirmId) {
-      setSongs(prev => prev.filter(s => s.id !== deleteConfirmId));
-      setDeleteConfirmId(null);
-    }
-  };
+  const liturgicalSeasons = ['Mùa Vọng', 'Giáng Sinh', 'Mùa Chay', 'Phục Sinh', 'Thường Niên', 'Thánh Thể', 'Đức Mẹ'];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="sticky top-0 z-30 flex gap-2 pt-2 bg-slate-50 dark:bg-slate-950 pb-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-900 dark:text-slate-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="Tìm bài hát..." 
-            value={searchTerm} 
-            onChange={e => setSearchTerm(e.target.value)} 
-            className="w-full pl-12 pr-4 py-4 bg-white dark:bg-white/5 rounded-2xl text-slate-950 dark:text-white font-black outline-none border border-slate-200 dark:border-white/10 shadow-sm focus:ring-2 focus:ring-blue-500 transition-all" 
-          />
+    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in pb-16 px-4">
+      {/* Refined Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-4">
+           <div className="space-y-1">
+             <h2 className="sacred-title text-3xl font-bold text-slate-900 italic leading-none uppercase">Thư Viện Thánh Nhạc</h2>
+             <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] italic mt-1">Kho tàng âm ca phụng sự Chúa</p>
+           </div>
+           
+           <div className="flex gap-2 w-full md:w-auto overflow-x-auto scrollbar-hide">
+              {['Tất cả', ...liturgicalSeasons.slice(0, 4)].map(s => (
+                 <button key={s} className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-amberGold hover:text-amberGold whitespace-nowrap transition-all shadow-sm">
+                    {s}
+                 </button>
+              ))}
+           </div>
         </div>
-        <button 
-          onClick={() => { setEditingSong({ id: Date.now().toString(), title: '', composer: '', category: 'Nhập lễ' }); setIsModalOpen(true); }} 
-          className="p-4 bg-blue-600 text-white rounded-2xl shadow-xl active:scale-90 transition-all"
-          title="Thêm bài hát"
-        >
-          <Plus size={24} strokeWidth={2.5} />
+        <button onClick={() => { setEditingSong(null); setIsModalOpen(true); }} className="active-pill px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.1em] flex items-center gap-3 shadow-lg hover:scale-[1.02] transition-all">
+          Thêm bài hát mới <Plus size={18} />
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 pb-24">
-        {filteredSongs.length === 0 ? (
-          <div className="py-20 text-center text-slate-400 font-black uppercase tracking-widest text-[10px] italic">Không tìm thấy bài hát</div>
-        ) : (
-          filteredSongs.map(song => (
-            <div key={song.id} className="bg-white dark:bg-white/5 p-6 rounded-[2.5rem] border border-slate-200 dark:border-white/5 shadow-sm space-y-4 hover:shadow-md transition-all">
-              <div className="flex justify-between items-start">
-                <span className="text-[9px] font-black uppercase px-4 py-1.5 bg-blue-600 text-white rounded-full">{song.category}</span>
-                <div className="flex gap-2">
-                  <button onClick={() => { setEditingSong(song); setIsModalOpen(true); }} className="p-2 text-slate-950 dark:text-slate-400 active:scale-90" title="Sửa"><UserPen size={20}/></button>
-                  <button onClick={() => setDeleteConfirmId(song.id)} className="p-2 text-rose-500 dark:text-rose-400 active:scale-90" title="Xóa"><Trash size={20}/></button>
+      {/* Refined Search Bar */}
+      <div className="bg-white rounded-2xl p-4 flex flex-col md:flex-row gap-4 items-center border border-slate-100 shadow-sm">
+         <div className="relative w-full">
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input 
+              type="text" 
+              placeholder="Tìm bài hát, tác giả..." 
+              className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl text-[13px] font-medium outline-none focus:border-amberGold transition-all shadow-inner"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+         </div>
+      </div>
+
+      {/* Standardized Song Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filtered.map(s => (
+          <div key={s.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all group flex flex-col h-full">
+             <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amberGold flex items-center justify-center border border-amber-100 shrink-0">
+                   <Music size={22} />
                 </div>
-              </div>
-              <div>
-                <h4 className="text-xl font-black text-slate-950 dark:text-white leading-tight mb-1">{song.title}</h4>
-                <p className="text-sm font-black text-slate-700 dark:text-slate-400 flex items-center gap-2 italic">
-                  <Music size={14} className="text-blue-500" /> Ns: {song.composer}
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100 dark:border-white/5">
-                 <button onClick={() => setViewingLyrics(song)} className="flex items-center justify-center p-4 bg-slate-950 dark:bg-white text-white dark:text-black rounded-2xl active:scale-95 transition-all shadow-lg" title="Lời bài hát"><FileText size={20}/></button>
-                 {song.pdfUrl ? (
-                   <a href={song.pdfUrl} target="_blank" rel="noreferrer" className="flex items-center justify-center p-4 bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-2xl border border-blue-200 dark:border-blue-500/20 active:scale-95 transition-all" title="Xem PDF"><Link2 size={20}/></a>
-                 ) : (
-                   <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl flex items-center justify-center text-slate-300 dark:text-slate-700"><Link2 size={20} /></div>
-                 )}
-              </div>
-            </div>
-          ))
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                   <button onClick={() => { setEditingSong(s); setForm(s); setIsModalOpen(true); }} className="p-2 text-slate-300 hover:text-amberGold transition-colors"><Edit2 size={16}/></button>
+                   <button onClick={() => deleteSong(s.id)} className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={16}/></button>
+                </div>
+             </div>
+
+             <div className="flex-1 space-y-4">
+                <div className="min-w-0">
+                   <h4 className="text-[16px] font-black text-slate-800 leading-tight group-hover:text-amberGold transition-colors line-clamp-2">
+                      {s.title}
+                      {s.isFamiliar && <Heart size={12} fill="#FBBF24" className="text-amberGold inline-block ml-1.5 mb-1" />}
+                   </h4>
+                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5 italic truncate">{s.composer}</p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                   <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-lg text-[8px] font-black uppercase tracking-widest border border-slate-200">{s.category}</span>
+                   {s.liturgicalSeasons.map(ls => (
+                      <span key={ls} className="px-3 py-1 bg-amber-50 border border-amber-100 text-amber-600 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center gap-1"><Tag size={10}/> {ls}</span>
+                   ))}
+                </div>
+                
+                {s.experienceNotes && (
+                   <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-2.5">
+                      <Info size={14} className="text-slate-300 mt-0.5 shrink-0" />
+                      <p className="text-[11px] font-medium text-slate-500 italic leading-relaxed line-clamp-3">{s.experienceNotes}</p>
+                   </div>
+                )}
+             </div>
+
+             <div className="mt-6 pt-4 border-t border-slate-50 flex items-center justify-between text-[8px] font-black text-slate-300 uppercase tracking-[0.2em]">
+                <span>Mã số: {s.id.slice(-4).toUpperCase()}</span>
+                <ChevronRight size={16} className="text-slate-200 group-hover:text-amberGold transition-all" />
+             </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="col-span-full py-20 text-center text-slate-300 text-[10px] font-black uppercase tracking-[0.4em] italic">Thư viện đang được cập nhật</div>
         )}
       </div>
 
-      {/* CRUD Bottom Sheet */}
-      {isModalOpen && editingSong && (
-        <div className="fixed inset-0 z-[150] flex items-end justify-center bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-t-[3rem] w-full max-w-lg p-8 pb-12 space-y-6 shadow-2xl animate-in slide-in-from-bottom-full duration-300">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-black text-slate-950 dark:text-white uppercase tracking-tight">Thánh Nhạc Phụng Vụ</h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-3 bg-slate-100 dark:bg-white/10 rounded-full text-slate-950 dark:text-white active:scale-90"><X size={20}/></button>
-            </div>
-            <div className="space-y-4">
-               <div className="space-y-1">
-                 <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Tên bài hát</label>
-                 <input type="text" value={editingSong.title} onChange={e => setEditingSong({...editingSong, title: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-950 dark:text-white font-black border-none outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
-               </div>
-               <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-1">
-                   <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Nhạc sĩ</label>
-                   <input type="text" value={editingSong.composer} onChange={e => setEditingSong({...editingSong, composer: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-950 dark:text-white font-black border-none outline-none transition-all" />
-                 </div>
-                 <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Phân loại</label>
-                    <select value={editingSong.category} onChange={e => setEditingSong({...editingSong, category: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-950 dark:text-white font-black outline-none border-none">
-                       <option value="Nhập lễ">Nhập lễ</option>
-                       <option value="Đáp ca">Đáp ca</option>
-                       <option value="Dâng lễ">Dâng lễ</option>
-                       <option value="Hiệp lễ">Hiệp lễ</option>
-                       <option value="Kết lễ">Kết lễ</option>
+      {/* Modal logic remains consistent */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
+          <div className="glass-card w-full max-w-lg rounded-[2.5rem] p-8 relative z-10 bg-white shadow-2xl animate-in zoom-in-95">
+             <div className="flex justify-between items-center mb-6">
+               <h3 className="sacred-title text-2xl font-bold text-slate-900 italic">Thêm Thánh Nhạc</h3>
+               <button onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400"><X size={24} /></button>
+             </div>
+             <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tên bài hát</label>
+                    <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-bold outline-none" placeholder="VD: Khát vọng hiệp thông" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tác giả</label>
+                    <input type="text" value={form.composer} onChange={e => setForm({...form, composer: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-bold outline-none" placeholder="Linh mục / Nhạc sĩ" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phần lễ</label>
+                    <select value={form.category} onChange={e => setForm({...form, category: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-bold outline-none">
+                       {['Nhập lễ', 'Đáp ca', 'Dâng lễ', 'Hiệp lễ', 'Kết lễ', 'Kính Đức Mẹ'].map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
-                 </div>
-               </div>
-               <div className="space-y-1">
-                 <label className="text-[10px] font-black text-slate-500 uppercase ml-2">Lời bài hát</label>
-                 <textarea value={editingSong.lyrics} onChange={e => setEditingSong({...editingSong, lyrics: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl text-slate-950 dark:text-white font-black h-32 outline-none border-none resize-none focus:ring-2 focus:ring-blue-500" />
-               </div>
-            </div>
-            <div className="flex gap-4">
-               <button onClick={() => setIsModalOpen(false)} className="flex-1 py-5 bg-slate-100 dark:bg-white/5 text-slate-950 dark:text-white rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all">Hủy</button>
-               <button onClick={handleSave} className="flex-[2] py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Lưu Bài Hát</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Sheet */}
-      {deleteConfirmId && (
-        <div className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-950/90 backdrop-blur-md p-0 animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-t-[3rem] w-full max-w-lg p-10 pb-12 space-y-8 shadow-2xl animate-in slide-in-from-bottom-full duration-300">
-            <div className="flex flex-col items-center text-center space-y-4">
-               <div className="w-20 h-20 bg-rose-50 dark:bg-rose-500/10 rounded-full flex items-center justify-center text-rose-500">
-                  <AlertCircle size={48} strokeWidth={2.5} />
-               </div>
-               <h3 className="text-2xl font-black text-slate-950 dark:text-white leading-tight">Gỡ bài hát vĩnh viễn?</h3>
-               <p className="text-sm font-bold text-slate-500 dark:text-slate-400 px-4">Hành động này không thể hoàn tác. Bản nhạc sẽ bị xóa khỏi thư viện chung.</p>
-            </div>
-            <div className="flex flex-col gap-3">
-               <button onClick={confirmDelete} className="w-full py-5 bg-rose-500 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-rose-500/30 active:scale-95 transition-all">Xác nhận xóa</button>
-               <button onClick={() => setDeleteConfirmId(null)} className="w-full py-5 bg-slate-100 dark:bg-white/10 text-slate-950 dark:text-white rounded-2xl font-black uppercase tracking-widest active:scale-95 transition-all">Hủy bỏ</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Fullscreen Lyrics Viewer */}
-      {viewingLyrics && (
-        <div className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-950/95 backdrop-blur-2xl p-4 animate-in zoom-in duration-300">
-          <div className="bg-white dark:bg-slate-900 rounded-[3.5rem] w-full max-w-lg p-10 max-h-[85vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200 dark:border-white/10">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-black text-slate-950 dark:text-white leading-tight">{viewingLyrics.title}</h3>
-              <button onClick={() => setViewingLyrics(null)} className="p-3 bg-slate-100 dark:bg-white/10 rounded-full text-slate-950 dark:text-white active:scale-90"><X size={24}/></button>
-            </div>
-            <div className="flex-1 overflow-y-auto font-serif text-xl font-bold leading-relaxed text-slate-950 dark:text-slate-200 text-center whitespace-pre-wrap px-4 py-4 border-y border-slate-100 dark:border-white/5 scrollbar-hide">
-              {viewingLyrics.lyrics || "Nội dung đang cập nhật..."}
-            </div>
-            <button onClick={() => setViewingLyrics(null)} className="mt-8 px-12 py-5 bg-slate-950 dark:bg-white text-white dark:text-black rounded-2xl font-black uppercase tracking-widest shadow-2xl active:scale-95 transition-all mx-auto">Hoàn tất</button>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ghi chú kinh nghiệm</label>
+                    <textarea value={form.experienceNotes} onChange={e => setForm({...form, experienceNotes: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-[14px] font-medium outline-none h-24" placeholder="Cảm nhận hoặc lưu ý khi tập hát..." />
+                </div>
+                <button type="submit" className="w-full py-4 active-pill rounded-xl font-black text-[11px] uppercase tracking-widest shadow-lg">Xác nhận ghi danh bài hát</button>
+             </form>
           </div>
         </div>
       )}

@@ -8,9 +8,8 @@ import {
   Clock, 
   UserMinus2, 
   UserRoundCheck, 
-  CalendarDays,
-  History,
-  ChevronRight
+  Filter,
+  ChevronDown
 } from 'lucide-react';
 
 interface AttendanceManagementProps {
@@ -65,118 +64,135 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({ members, at
     });
   };
 
-  const handleSave = () => {
-    setShowSuccessToast(true);
-    setTimeout(() => setShowSuccessToast(false), 3000);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  const metrics = [
+    { label: 'Tỉ lệ hiện diện', value: `${stats.rate}%`, fill: 'bg-amberGold' },
+    { label: 'Hiện diện', value: stats.presentCount.toString(), fill: 'bg-emeraldGreen' },
+    { label: 'Vắng mặt', value: (stats.total - stats.presentCount).toString(), fill: 'bg-rose-500' },
+  ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-700 pb-48 px-1">
-      {/* Header Sticky */}
-      <div className="sticky top-16 lg:top-20 z-40 bg-white/80 dark:bg-[#0a0f1e]/80 backdrop-blur-xl -mx-4 px-4 py-4 space-y-4 border-b border-slate-100 dark:border-white/5 transition-all duration-500">
-        <div className="bg-slate-900 dark:bg-[#1e1b4b] text-white p-6 rounded-[2.5rem] shadow-2xl flex items-center justify-between border border-white/5">
-           <div className="flex gap-6">
-              <div className="flex flex-col">
-                <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest mb-1">Hiện diện</span>
-                <span className="text-xl font-black leading-none">{stats.presentCount} / {stats.total}</span>
-              </div>
-              <div className="w-px h-8 bg-white/10 mt-1"></div>
-              <div className="flex flex-col">
-                <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest mb-1">Tỉ lệ</span>
-                <span className="text-xl font-black leading-none">{stats.rate}%</span>
-              </div>
-           </div>
-           <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-              <CalendarDays size={20} className="text-blue-400" />
-           </div>
+    <div className="space-y-10 animate-fade-in pb-32">
+       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 px-2">
+        <div className="space-y-2">
+          <h1 className="text-3xl md:text-5xl font-black text-slate-800 tracking-tight font-serif italic">Sổ Điểm Danh</h1>
+          <p className="text-slate-400 text-[10px] md:text-[12px] font-black uppercase tracking-widest mt-2 italic">Ghi nhận sự hiện diện của ca viên trong các buổi Phụng vụ.</p>
+        </div>
+        <div className="flex gap-3">
+           <input 
+              type="date" 
+              value={selectedDate} 
+              onChange={e => setSelectedDate(e.target.value)}
+              className="glass-button px-6 py-4 rounded-[1.5rem] text-[13px] font-bold text-slate-600 outline-none shadow-sm" 
+            />
+           <button 
+             onClick={() => { setShowSuccessToast(true); setTimeout(() => setShowSuccessToast(false), 3000); }}
+             className="active-pill px-8 py-4 rounded-[1.5rem] text-[11px] font-black uppercase tracking-widest flex items-center gap-2.5 shadow-xl hover:scale-105 transition-transform"
+           >
+             Lưu kết quả <UserRoundCheck size={18} />
+           </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 px-2">
+        {metrics.map((m, idx) => (
+          <div key={idx} className="glass-card p-8 rounded-[2.5rem] flex flex-col gap-3 shadow-sm border-white/60">
+             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">{m.label}</p>
+             <div className="flex items-center justify-between">
+                <span className="text-2xl font-black text-slate-800 tracking-tighter">{m.value}</span>
+                <div className="w-24 h-2 bg-slate-100/50 rounded-full overflow-hidden shadow-inner border border-slate-100">
+                   <div className={`h-full ${m.fill} transition-all duration-700`} style={{ width: m.value.includes('%') ? m.value : '100%' }}></div>
+                </div>
+             </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col lg:flex-row gap-6 lg:items-center justify-between px-2">
+        <div className="flex flex-wrap items-center gap-3">
+           {['Nhóm ca', 'Trạng thái'].map(f => (
+             <button key={f} className="glass-button px-6 py-3.5 rounded-[1.2rem] text-[11px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-2.5 border-slate-200 shadow-sm">
+               {f} <ChevronDown size={14} />
+             </button>
+           ))}
         </div>
 
-        <div className="flex gap-2 h-14">
-          <div className="flex-1 relative">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Tìm ca viên..." 
-              value={searchTerm} 
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full h-full pl-14 pr-4 bg-slate-50 dark:bg-white/5 rounded-[2rem] text-sm font-bold outline-none border border-slate-100 dark:border-white/10 dark:text-white" 
-            />
-          </div>
-          <input 
-            type="date" 
-            value={selectedDate} 
-            onChange={e => setSelectedDate(e.target.value)}
-            className="w-36 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-[2rem] text-[10px] font-black text-center outline-none dark:text-white" 
-          />
+        <div className="relative glass-card rounded-[1.2rem] px-6 py-3.5 flex items-center gap-4 shadow-none border-slate-200 focus-within:border-amberGold transition-all w-full md:w-[350px]">
+           <Search size={18} className="text-slate-400" />
+           <input 
+             type="text" 
+             placeholder="Tìm ca viên..." 
+             className="bg-transparent border-none outline-none text-[14px] font-bold w-full"
+             value={searchTerm}
+             onChange={(e) => setSearchTerm(e.target.value)}
+           />
         </div>
       </div>
 
       {showSuccessToast && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4">
-          <div className="bg-emerald-600 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 border border-white/20">
-            <Check size={18} strokeWidth={3} /> 
-            <span className="text-[10px] font-black uppercase tracking-widest">Đã lưu kết quả sứ vụ</span>
+          <div className="bg-emerald-600 text-white px-10 py-4 rounded-full shadow-2xl flex items-center gap-3 border border-white/20 backdrop-blur-md">
+            <Check size={20} strokeWidth={3} /> 
+            <span className="text-[11px] font-black uppercase tracking-widest">Đã ghi nhận hiện diện thành công</span>
           </div>
         </div>
       )}
 
-      {/* List optimized for touch */}
-      <div className="space-y-4 pt-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-2">
         {filteredMembers.map((member) => {
           const status = currentAttendance.records.find(r => r.memberId === member.id)?.status || 'ABSENT';
           return (
-            <div key={member.id} className={`bg-white dark:bg-[#1e1b4b]/20 p-5 rounded-[2.5rem] border transition-all duration-500 shadow-sm flex flex-col gap-5 ${
-              status === 'PRESENT' ? 'border-emerald-500/40 ring-4 ring-emerald-500/5' : 
-              status === 'LATE' ? 'border-amber-500/40 ring-4 ring-amber-500/5' : 
-              'border-slate-50 dark:border-white/5'
+            <div key={member.id} className={`glass-card p-8 rounded-[2.5rem] space-y-8 group transition-all duration-500 border-white/60 ${
+              status === 'PRESENT' ? 'ring-4 ring-emerald-500/10 bg-white/60' : 
+              status === 'LATE' ? 'ring-4 ring-amber-500/10 bg-white/60' : 'bg-white/40'
             }`}>
               <div className="flex items-center gap-5">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shrink-0 transition-all ${
-                  status === 'PRESENT' ? 'bg-emerald-500 text-white shadow-lg' : 
-                  status === 'LATE' ? 'bg-amber-500 text-white shadow-lg' : 
-                  'bg-slate-100 dark:bg-white/5 text-slate-300'
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-black text-2xl transition-all shadow-md ${
+                  status === 'PRESENT' ? 'bg-emerald-500 text-white border-emerald-400' : 
+                  status === 'LATE' ? 'bg-amber-500 text-white border-amber-400' : 
+                  'bg-white border border-slate-100 text-slate-300'
                 }`}>
-                  {member.name.split(' ').pop()?.[0]}
+                  {member.name[0]}
                 </div>
-                <div className="flex-1 min-w-0">
-                   <h4 className="text-base font-black dark:text-white leading-tight break-words">
-                     {member.saintName ? `${member.saintName} ` : ''}{member.name}
+                <div>
+                   <h4 className="text-[16px] font-black text-slate-800 leading-tight group-hover:text-amberGold transition-colors">
+                     {member.name}
                    </h4>
-                   <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 block mt-1">{member.role}</span>
+                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1.5">{member.role}</p>
                 </div>
               </div>
 
-              {/* Action Buttons - Large touch targets */}
-              <div className="flex items-center bg-slate-50 dark:bg-black/30 p-2 rounded-[2rem] gap-2 border border-slate-200/50 dark:border-white/10">
-                <button onClick={() => handleUpdate(member.id, 'PRESENT')} className={`flex flex-col items-center justify-center flex-1 h-20 rounded-2xl transition-all active:scale-95 ${status === 'PRESENT' ? 'bg-emerald-500 text-white shadow-xl' : 'text-slate-400 dark:text-slate-600 hover:bg-white/5'}`}>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => handleUpdate(member.id, 'PRESENT')} 
+                  className={`flex-1 flex flex-col items-center justify-center py-5 rounded-[1.5rem] transition-all border shadow-sm ${
+                    status === 'PRESENT' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'glass-button text-slate-400 border-slate-100'
+                  }`}
+                >
                   <UserCheck2 size={22} />
-                  <span className="text-[7px] font-black mt-1.5 uppercase">CÓ MẶT</span>
+                  <span className="text-[9px] font-black mt-2 uppercase tracking-widest">Có mặt</span>
                 </button>
-                <button onClick={() => handleUpdate(member.id, 'LATE')} className={`flex flex-col items-center justify-center flex-1 h-20 rounded-2xl transition-all active:scale-95 ${status === 'LATE' ? 'bg-amber-500 text-white shadow-xl' : 'text-slate-400 dark:text-slate-600 hover:bg-white/5'}`}>
+                <button 
+                  onClick={() => handleUpdate(member.id, 'LATE')} 
+                  className={`flex-1 flex flex-col items-center justify-center py-5 rounded-[1.5rem] transition-all border shadow-sm ${
+                    status === 'LATE' ? 'bg-amber-50 border-amber-200 text-amber-600' : 'glass-button text-slate-400 border-slate-100'
+                  }`}
+                >
                   <Clock size={22} />
-                  <span className="text-[7px] font-black mt-1.5 uppercase">TRỄ</span>
+                  <span className="text-[9px] font-black mt-2 uppercase tracking-widest">Đến trễ</span>
                 </button>
-                <button onClick={() => handleUpdate(member.id, 'ABSENT')} className={`flex flex-col items-center justify-center flex-1 h-20 rounded-2xl transition-all active:scale-95 ${status === 'ABSENT' ? 'bg-rose-500 text-white shadow-xl' : 'text-slate-400 dark:text-slate-600 hover:bg-white/5'}`}>
+                <button 
+                  onClick={() => handleUpdate(member.id, 'ABSENT')} 
+                  className={`flex-1 flex flex-col items-center justify-center py-5 rounded-[1.5rem] transition-all border shadow-sm ${
+                    status === 'ABSENT' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'glass-button text-slate-400 border-slate-100'
+                  }`}
+                >
                   <UserMinus2 size={22} />
-                  <span className="text-[7px] font-black mt-1.5 uppercase">VẮNG</span>
+                  <span className="text-[9px] font-black mt-2 uppercase tracking-widest">Vắng</span>
                 </button>
               </div>
             </div>
           );
         })}
-      </div>
-
-      {/* Floating Action Bar */}
-      <div className="fixed bottom-10 left-0 right-0 px-6 z-50 pointer-events-none">
-        <div className="max-w-md mx-auto pointer-events-auto">
-          <button 
-            onClick={handleSave}
-            className="w-full py-7 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-[2.5rem] font-black text-[12px] uppercase tracking-[0.4em] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)] active:scale-95 transition-all flex items-center justify-center gap-4 border border-white/10"
-          >
-            <UserRoundCheck size={22} /> Lưu Sứ Vụ Ngày {new Date(selectedDate).getDate()}/{new Date(selectedDate).getMonth()+1}
-          </button>
-        </div>
       </div>
     </div>
   );

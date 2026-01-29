@@ -4,24 +4,19 @@ export enum AppView {
   SCHEDULE = 'SCHEDULE',
   MEMBERS = 'MEMBERS',
   FINANCE = 'FINANCE',
+  LIBRARY = 'LIBRARY',
+  ANALYTICS = 'ANALYTICS',
   AI_ASSISTANT = 'AI_ASSISTANT',
   MEMBER_PORTAL = 'MEMBER_PORTAL',
-  LIBRARY = 'LIBRARY',
-  ANALYTICS = 'ANALYTICS'
 }
 
 export type LiturgicalColor = 'GREEN' | 'RED' | 'WHITE' | 'VIOLET' | 'GOLD' | 'ROSE';
 
-export type LiturgicalRank = 'SOLEMNITY' | 'FEAST' | 'MEMORIAL' | 'SUNDAY' | 'OPTIONAL';
+export type LiturgicalRank = 'SOLEMNITY' | 'FEAST' | 'SUNDAY' | 'OPTIONAL';
 
-export interface OrdoEvent {
-  date: string;
-  massName: string;
-  liturgicalColor: LiturgicalColor;
-  rank: LiturgicalRank;
-  isObligatory: boolean; // Lễ buộc
-  note: string;
-}
+export type MemberStatus = 'ACTIVE' | 'ON_LEAVE' | 'RETIRED';
+export type VoicePart = 'Soprano' | 'Alto' | 'Tenor' | 'Bass' | 'Chưa phân phối';
+export type Instrument = 'Organ' | 'Guitar' | 'Violin' | 'Khác' | 'Không';
 
 export interface Member {
   id: string;
@@ -30,11 +25,14 @@ export interface Member {
   phone: string;
   gender: 'Nam' | 'Nữ';
   role: 'Ca trưởng' | 'Ca phó' | 'Thư ký' | 'Thủ quỹ' | 'Thành viên' | 'Nhạc công';
-  instrument?: string;
+  voicePart?: VoicePart; // Deprecated as per user request
+  grade?: string;        // Added "Lớp"
+  birthYear?: string;    // Added "Năm sinh"
+  instrument?: Instrument;
+  avatar?: string;
   joinDate: string;
-  birthDate?: string;
-  groupName?: string;
-  missionStatus: 'ACTIVE' | 'ON_LEAVE' | 'RETIRED';
+  status: MemberStatus;
+  notes?: string;
 }
 
 export interface Song {
@@ -42,8 +40,10 @@ export interface Song {
   title: string;
   composer: string;
   category: string;
+  liturgicalSeasons: string[];
+  isFamiliar: boolean;
+  experienceNotes?: string;
   lyrics?: string;
-  pdfUrl?: string;
 }
 
 export interface ScheduleEvent {
@@ -51,10 +51,13 @@ export interface ScheduleEvent {
   date: string;
   time: string;
   massName: string;
-  type: 'MASS' | 'PRACTICE';
-  liturgicalColor?: LiturgicalColor;
-  songs?: string[]; // IDs of songs
+  type: 'MASS' | 'PRACTICE'; 
+  liturgicalColor: LiturgicalColor;
   location: string;
+  organistId?: string;
+  psalmistId?: string;
+  leadSingerIds?: string[];
+  notes?: string;
 }
 
 export interface Transaction {
@@ -64,14 +67,26 @@ export interface Transaction {
   amount: number;
   type: 'IN' | 'OUT';
   category: string;
+  receiptUrl?: string;
 }
 
 export interface AttendanceRecord {
   memberId: string;
   status: 'PRESENT' | 'ABSENT' | 'LATE';
+  reportedAt?: string; 
+  reason?: string;     
 }
 
 export interface DailyAttendance {
   date: string;
   records: AttendanceRecord[];
+}
+
+export interface OrdoEvent {
+  date: string;
+  massName: string;
+  liturgicalColor: LiturgicalColor;
+  rank: LiturgicalRank;
+  isObligatory: boolean;
+  note: string;
 }
