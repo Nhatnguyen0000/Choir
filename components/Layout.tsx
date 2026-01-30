@@ -1,7 +1,7 @@
 import React from 'react';
 import { AppView } from '../types';
 import { 
-  Music2, Bell, CircleUser, LayoutDashboard, Users, Calendar, Library, Wallet, Sparkles, LogOut 
+  Music2, Bell, CircleUser, LayoutDashboard, Users, Calendar, Library, Wallet, Sparkles, LogOut, Check
 } from 'lucide-react';
 import { useNotificationStore, useAuthStore } from '../store';
 
@@ -56,6 +56,9 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
           </nav>
 
           <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100 text-[8px] font-black uppercase tracking-widest">
+               <Check size={12} strokeWidth={3} /> Đã sao lưu sổ bộ
+            </div>
             <button className="p-2.5 rounded-xl glass-button text-slate-500 relative flex items-center justify-center hover:bg-slate-50 transition-all shadow-sm border-slate-100">
               <Bell size={18} />
               {unreadCount > 0 && (

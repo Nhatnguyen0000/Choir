@@ -12,44 +12,38 @@ import AnalyticsManagement from './components/AnalyticsManagement';
 import { useAuthStore, useMemberStore, useEventStore, useFinanceStore, useLibraryStore } from './store';
 
 const App: React.FC = () => {
-  const { setMembers, setAttendanceData, members, attendanceData } = useMemberStore();
-  const { setEvents } = useEventStore();
+  const { members, attendanceData } = useMemberStore();
+  const { events } = useEventStore();
   const { transactions } = useFinanceStore();
-  const { setTransactions } = useFinanceStore();
-  const { setSongs } = useLibraryStore();
+  const { songs } = useLibraryStore();
   const { user, login } = useAuthStore();
 
   const [currentView, setCurrentView] = React.useState<AppView>(AppView.DASHBOARD);
 
   useEffect(() => {
-    // Khởi tạo tài khoản quản trị mặc định (Dữ liệu sạch)
-    const adminUser: Member = {
-      id: 'm-admin',
-      saintName: 'Phêrô',
-      name: 'Giuse Nguyễn Văn A',
-      phone: '0901234567',
-      gender: 'Nam',
-      role: 'Ca trưởng',
-      joinDate: new Date().toISOString().split('T')[0],
-      // Fix: missionStatus is not a property of Member, using status instead
-      status: 'ACTIVE'
-    };
-    login(adminUser);
-
-    // Xóa sạch dữ liệu mẫu cũ để đồng bộ từ đầu
-    setMembers([adminUser]);
-    setSongs([]);
-    setEvents([]);
-    setTransactions([]);
-    setAttendanceData([]);
-  }, [setMembers, setEvents, setTransactions, setSongs, setAttendanceData, login]);
+    // Chỉ khởi tạo tài khoản mặc định nếu chưa có ai trong danh sách
+    if (members.length === 0) {
+      const adminUser: Member = {
+        id: 'm-admin',
+        saintName: 'Phêrô',
+        name: 'Giuse Nguyễn Văn A',
+        phone: '0901234567',
+        gender: 'Nam',
+        role: 'Ca trưởng',
+        joinDate: new Date().toISOString().split('T')[0],
+        status: 'ACTIVE'
+      };
+      useMemberStore.getState().addMember(adminUser);
+      if (!user) login(adminUser);
+    }
+  }, [members.length, user, login]);
 
   const renderContent = () => {
     if (currentView === AppView.MEMBER_PORTAL && user) {
       return (
         <MemberPortal 
           currentUser={user} 
-          scheduleItems={[]} // Sẽ lấy từ store thông qua component
+          scheduleItems={events} 
           onSwitchToAdmin={() => setCurrentView(AppView.DASHBOARD)} 
         />
       );
@@ -74,13 +68,13 @@ const App: React.FC = () => {
             onClick={() => setCurrentView(AppView.ANALYTICS)}
             className={`text-[10px] font-black uppercase tracking-widest transition-all px-4 py-2 rounded-xl ${currentView === AppView.ANALYTICS ? 'bg-amberGold text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
           >
-            Phân tích chuyên sâu
+            Thống kê Phụng vụ
           </button>
           <button 
             onClick={() => setCurrentView(currentView === AppView.MEMBER_PORTAL ? AppView.DASHBOARD : AppView.MEMBER_PORTAL)}
             className="text-[10px] font-black uppercase tracking-widest text-white bg-slate-900 px-4 py-2 rounded-xl shadow-lg hover:scale-105 transition-all"
           >
-            {currentView === AppView.MEMBER_PORTAL ? 'Về Quản trị' : 'Cổng Ca Viên'}
+            {currentView === AppView.MEMBER_PORTAL ? 'Về Trang Điều Hành' : 'Cổng Ca Viên'}
           </button>
         </div>
         {renderContent()}
