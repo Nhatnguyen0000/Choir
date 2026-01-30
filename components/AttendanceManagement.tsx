@@ -56,9 +56,11 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({ members, at
         newData[existingIdx] = { ...newData[existingIdx], records };
         return newData;
       } else {
+        // Fixed: added missing choirId property required by DailyAttendance interface
         return [...prev, { 
           date: selectedDate, 
-          records: members.map(m => ({ memberId: m.id, status: m.id === memberId ? status : 'ABSENT' })) 
+          choirId: members[0]?.choirId || 'c-thienthan',
+          records: members.map(m => ({ memberId: m.id, status: (m.id === memberId ? status : 'ABSENT') as 'PRESENT' | 'ABSENT' | 'LATE' })) 
         }];
       }
     });
@@ -67,7 +69,7 @@ const AttendanceManagement: React.FC<AttendanceManagementProps> = ({ members, at
   const metrics = [
     { label: 'Tỉ lệ hiện diện', value: `${stats.rate}%`, fill: 'bg-amberGold' },
     { label: 'Hiện diện', value: stats.presentCount.toString(), fill: 'bg-emeraldGreen' },
-    { label: 'Vắng mặt', value: (stats.total - stats.presentCount).toString(), fill: 'bg-rose-500' },
+    { label: 'Vắng mặt', value: (stats.total - stats.presentCount).toString(), fill: 'bg-rose-50' },
   ];
 
   return (
