@@ -14,7 +14,7 @@ import {
   Phone,
   UserCheck
 } from 'lucide-react';
-import { Member, ScheduleEvent } from '../types';
+import { Member, ScheduleEvent, DailyAttendance, AttendanceRecord } from '../types';
 import { useMemberStore } from '../store';
 import * as XLSX from 'xlsx';
 
@@ -26,7 +26,7 @@ interface MemberPortalProps {
 
 type PortalTab = 'MEMBERS' | 'ATTENDANCE';
 
-const MemberPortal: React.FC<MemberPortalProps> = ({ currentUser }) => {
+const MemberPortal: React.FC<MemberPortalProps> = ({ currentUser }: MemberPortalProps) => {
   const { members, attendanceData, addMember, updateMember, deleteMember, updateAttendance } = useMemberStore();
   
   const [activeTab, setActiveTab] = useState<PortalTab>('MEMBERS');
@@ -39,7 +39,7 @@ const MemberPortal: React.FC<MemberPortalProps> = ({ currentUser }) => {
   const initialForm: Partial<Member> = {
     name: '',
     saintName: '',
-    role: 'Thành viên',
+    role: 'Ca viên',
     phone: '',
     gender: 'Nam',
     status: 'ACTIVE',
@@ -48,14 +48,14 @@ const MemberPortal: React.FC<MemberPortalProps> = ({ currentUser }) => {
   const [form, setForm] = useState<Partial<Member>>(initialForm);
 
   const filteredMembers = useMemo(() => {
-    return members.filter(m => 
+    return members.filter((m: Member) => 
       m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (m.saintName && m.saintName.toLowerCase().includes(searchTerm.toLowerCase()))
-    ).sort((a, b) => a.name.localeCompare(b.name));
+    ).sort((a: Member, b: Member) => a.name.localeCompare(b.name));
   }, [members, searchTerm]);
 
   const handleExportExcel = () => {
-    const data = members.map(m => ({
+    const data = members.map((m: Member) => ({
       'Tên Thánh': m.saintName || '',
       'Họ và Tên': m.name,
       'Số điện thoại': m.phone || '',
@@ -90,7 +90,7 @@ const MemberPortal: React.FC<MemberPortalProps> = ({ currentUser }) => {
   };
 
   const currentDayRecords = useMemo(() => {
-    return attendanceData.find(d => d.date === selectedDate)?.records || [];
+    return attendanceData.find((d: DailyAttendance) => d.date === selectedDate)?.records || [];
   }, [attendanceData, selectedDate]);
 
   return (
@@ -124,7 +124,7 @@ const MemberPortal: React.FC<MemberPortalProps> = ({ currentUser }) => {
               placeholder="Tìm theo tên..."
               className="w-full pl-12 pr-5 py-3 glass-card rounded-xl border-white/60 outline-none shadow-sm focus:ring-4 focus:ring-slate-100 transition-all text-sm font-medium"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
             />
           </div>
 
@@ -140,7 +140,7 @@ const MemberPortal: React.FC<MemberPortalProps> = ({ currentUser }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {filteredMembers.map(m => (
+                  {filteredMembers.map((m: Member) => (
                     <tr key={m.id} className="table-row-hover transition-colors group">
                       <td className="px-8 py-4">
                         <div className="flex items-center gap-3">
@@ -180,13 +180,13 @@ const MemberPortal: React.FC<MemberPortalProps> = ({ currentUser }) => {
             <div className="p-2.5 bg-slate-50 text-slate-400 rounded-xl"><Calendar size={18} /></div>
             <div className="flex flex-col">
               <label className="text-[8px] font-black text-slate-400 uppercase tracking-[0.2em]">Ngày Hiệp Thông</label>
-              <input type="date" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} className="text-base font-black text-slate-900 bg-transparent outline-none cursor-pointer" />
+              <input type="date" value={selectedDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedDate(e.target.value)} className="text-base font-black text-slate-900 bg-transparent outline-none cursor-pointer" />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredMembers.map(m => {
-              const record = currentDayRecords.find(r => r.memberId === m.id);
+            {filteredMembers.map((m: Member) => {
+              const record = currentDayRecords.find((r: AttendanceRecord) => r.memberId === m.id);
               const status = record?.status || 'ABSENT';
               return (
                 <div key={m.id} className="glass-card border-white/60 rounded-[1.8rem] p-5 flex items-center justify-between hover:shadow-lg transition-all group bg-white/60">
@@ -227,11 +227,11 @@ const MemberPortal: React.FC<MemberPortalProps> = ({ currentUser }) => {
                 <div className="grid grid-cols-2 gap-5">
                   <div className="space-y-1.5">
                       <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Tên Thánh</label>
-                      <input type="text" value={form.saintName} onChange={e => setForm({...form, saintName: e.target.value})} className="w-full px-4 py-3 glass-card rounded-xl text-sm font-bold outline-none border-white shadow-inner bg-slate-50/50" />
+                      <input type="text" value={form.saintName} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({...form, saintName: e.target.value})} className="w-full px-4 py-3 glass-card rounded-xl text-sm font-bold outline-none border-white shadow-inner bg-slate-50/50" />
                   </div>
                   <div className="space-y-1.5">
                       <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest ml-1">Họ và Tên</label>
-                      <input type="text" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-4 py-3 glass-card rounded-xl text-sm font-bold outline-none border-white shadow-inner bg-slate-50/50" />
+                      <input type="text" required value={form.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm({...form, name: e.target.value})} className="w-full px-4 py-3 glass-card rounded-xl text-sm font-bold outline-none border-white shadow-inner bg-slate-50/50" />
                   </div>
                 </div>
                 <div className="pt-6 flex gap-3">

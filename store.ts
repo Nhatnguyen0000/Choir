@@ -27,11 +27,11 @@ const defaultUser: Member = {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set: (partial: Partial<AuthState>) => void) => ({
       isAuthenticated: true, // Luôn luôn là true
       user: defaultUser,
       choir: defaultChoir,
-      login: (user, choir) => set({ isAuthenticated: true, user, choir }),
+      login: (user: Member, choir: Choir) => set({ isAuthenticated: true, user, choir }),
       logout: () => set({ isAuthenticated: true, user: defaultUser, choir: defaultChoir }), // Reset về mặc định thay vì logout
     }),
     { name: 'auth-storage-v3' }
@@ -47,14 +47,14 @@ interface EventState {
 
 export const useEventStore = create<EventState>()(
   persist(
-    (set) => ({
+    (set: (partial: Partial<EventState> | ((state: EventState) => Partial<EventState>)) => void) => ({
       events: [],
-      addEvent: (event) => set((state) => ({ events: [event, ...state.events] })),
-      updateEvent: (event) => set((state) => ({ 
-        events: state.events.map(e => e.id === event.id ? event : e) 
+      addEvent: (event: ScheduleEvent) => set((state: EventState) => ({ events: [event, ...state.events] })),
+      updateEvent: (event: ScheduleEvent) => set((state: EventState) => ({ 
+        events: state.events.map((e: ScheduleEvent) => e.id === event.id ? event : e) 
       })),
-      deleteEvent: (id) => set((state) => ({ 
-        events: state.events.filter(e => e.id !== id) 
+      deleteEvent: (id: string) => set((state: EventState) => ({ 
+        events: state.events.filter((e: ScheduleEvent) => e.id !== id) 
       })),
     }),
     { name: 'event-storage-v3' }
@@ -72,24 +72,24 @@ interface MemberState {
 
 export const useMemberStore = create<MemberState>()(
   persist(
-    (set) => ({
+    (set: (partial: Partial<MemberState> | ((state: MemberState) => Partial<MemberState>)) => void) => ({
       members: [],
       attendanceData: [],
-      addMember: (member) => set((state) => ({ members: [member, ...state.members] })),
-      updateMember: (member) => set((state) => ({
-        members: state.members.map(m => m.id === member.id ? member : m)
+      addMember: (member: Member) => set((state: MemberState) => ({ members: [member, ...state.members] })),
+      updateMember: (member: Member) => set((state: MemberState) => ({
+        members: state.members.map((m: Member) => m.id === member.id ? member : m)
       })),
-      deleteMember: (id) => set((state) => ({
-        members: state.members.filter(m => m.id !== id)
+      deleteMember: (id: string) => set((state: MemberState) => ({
+        members: state.members.filter((m: Member) => m.id !== id)
       })),
-      updateAttendance: (date, choirId, memberId, status) => set((state) => {
-        const existingDateIdx = state.attendanceData.findIndex(d => d.date === date && d.choirId === choirId);
+      updateAttendance: (date: string, choirId: string, memberId: string, status: 'PRESENT' | 'ABSENT' | 'LATE') => set((state: MemberState) => {
+        const existingDateIdx = state.attendanceData.findIndex((d: DailyAttendance) => d.date === date && d.choirId === choirId);
         const newRecord: AttendanceRecord = { memberId, status };
         
         const newAttendanceData = [...state.attendanceData];
         if (existingDateIdx >= 0) {
           const records = [...newAttendanceData[existingDateIdx].records];
-          const recordIdx = records.findIndex(r => r.memberId === memberId);
+          const recordIdx = records.findIndex((r: AttendanceRecord) => r.memberId === memberId);
           if (recordIdx >= 0) records[recordIdx] = newRecord;
           else records.push(newRecord);
           newAttendanceData[existingDateIdx] = { ...newAttendanceData[existingDateIdx], records };
@@ -114,14 +114,14 @@ interface LibraryState {
 
 export const useLibraryStore = create<LibraryState>()(
   persist(
-    (set) => ({
+    (set: (partial: Partial<LibraryState> | ((state: LibraryState) => Partial<LibraryState>)) => void) => ({
       songs: [],
-      addSong: (song) => set((state) => ({ songs: [song, ...state.songs] })),
-      updateSong: (song) => set((state) => ({
-        songs: state.songs.map(s => s.id === song.id ? song : s)
+      addSong: (song: Song) => set((state: LibraryState) => ({ songs: [song, ...state.songs] })),
+      updateSong: (song: Song) => set((state: LibraryState) => ({
+        songs: state.songs.map((s: Song) => s.id === song.id ? song : s)
       })),
-      deleteSong: (id) => set((state) => ({
-        songs: state.songs.filter(s => s.id !== id)
+      deleteSong: (id: string) => set((state: LibraryState) => ({
+        songs: state.songs.filter((s: Song) => s.id !== id)
       })),
     }),
     { name: 'library-storage-v3' }
@@ -136,11 +136,11 @@ interface FinanceState {
 
 export const useFinanceStore = create<FinanceState>()(
   persist(
-    (set) => ({
+    (set: (partial: Partial<FinanceState> | ((state: FinanceState) => Partial<FinanceState>)) => void) => ({
       transactions: [],
-      addTransaction: (transaction) => set((state) => ({ transactions: [transaction, ...state.transactions] })),
-      deleteTransaction: (id) => set((state) => ({
-        transactions: state.transactions.filter(t => t.id !== id)
+      addTransaction: (transaction: Transaction) => set((state: FinanceState) => ({ transactions: [transaction, ...state.transactions] })),
+      deleteTransaction: (id: string) => set((state: FinanceState) => ({
+        transactions: state.transactions.filter((t: Transaction) => t.id !== id)
       })),
     }),
     { name: 'finance-storage-v3' }
@@ -156,18 +156,18 @@ interface NotificationState {
 
 export const useNotificationStore = create<NotificationState>()(
   persist(
-    (set) => ({
+    (set: (partial: Partial<NotificationState> | ((state: NotificationState) => Partial<NotificationState>)) => void) => ({
       notifications: [
         { id: '1', title: 'Chào mừng anh chị!', content: 'Hệ thống Ca Đoàn Thiên Thần đã sẵn sàng.', time: 'Vừa xong', isRead: false },
         { id: '2', title: 'Lịch công tác', content: 'Ban Điều Hành vui lòng cập nhật lịch lễ cho tuần mới.', time: '1 giờ trước', isRead: false }
       ],
       unreadCount: 2,
-      addNotification: (n) => set((state) => ({ 
+      addNotification: (n: Notification) => set((state: NotificationState) => ({ 
         notifications: [n, ...state.notifications],
         unreadCount: state.unreadCount + 1
       })),
-      markAsRead: (id) => set((state) => ({
-        notifications: state.notifications.map(n => n.id === id ? { ...n, isRead: true } : n),
+      markAsRead: (id: string) => set((state: NotificationState) => ({
+        notifications: state.notifications.map((n: Notification) => n.id === id ? { ...n, isRead: true } : n),
         unreadCount: Math.max(0, state.unreadCount - 1)
       })),
     }),
