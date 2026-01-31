@@ -35,7 +35,7 @@ const LibraryManagement: React.FC = () => {
   const liturgicalSeasons = ['Mùa Vọng', 'Giáng Sinh', 'Mùa Chay', 'Phục Sinh', 'Thường Niên', 'Thánh Thể', 'Đức Mẹ'];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in pb-12 px-2 pt-4">
+    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in pb-12 px-2 pt-4 relative z-10">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-4">
@@ -63,7 +63,7 @@ const LibraryManagement: React.FC = () => {
         <input 
           type="text" 
           placeholder="Tìm tên bài hát, tác giả..." 
-          className="w-full pl-14 pr-5 py-4 glass-card rounded-[1.5rem] border-white/60 outline-none shadow-sm focus:ring-4 focus:ring-slate-100 transition-all text-sm font-medium placeholder:text-slate-300 bg-white/60"
+          className="w-full pl-14 pr-5 py-4 glass-card rounded-[1.5rem] outline-none focus:ring-4 focus:ring-slate-100 transition-all text-sm font-medium placeholder:text-slate-300"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
@@ -72,7 +72,7 @@ const LibraryManagement: React.FC = () => {
       {/* Song Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.map(s => (
-          <div key={s.id} className="glass-card p-6 rounded-[2.5rem] border-white/60 hover:shadow-xl transition-all group flex flex-col h-full bg-white/70 shadow-sm">
+          <div key={s.id} className="glass-card p-6 rounded-[2.5rem] group flex flex-col h-full">
              <div className="flex items-start justify-between mb-5">
                 <div className="w-12 h-12 rounded-xl bg-amber-50 text-amberGold flex items-center justify-center border border-amber-100 shadow-inner">
                    <Music size={22} strokeWidth={2.5} />

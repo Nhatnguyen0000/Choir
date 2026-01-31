@@ -36,7 +36,7 @@ const FinanceManagement: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in pb-12 px-2 pt-4">
+    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in pb-12 px-2 pt-4 relative z-10">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-0.5">
@@ -71,7 +71,7 @@ const FinanceManagement: React.FC = () => {
       </div>
 
       {/* Ledger Glass Card */}
-      <div className="glass-card rounded-[2rem] border-white/60 shadow-sm overflow-hidden bg-white/60">
+      <div className="glass-card rounded-[2rem] overflow-hidden">
         <div className="px-8 py-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2 italic">
               <History size={16} className="text-amberGold" /> Chi tiết biến động quỹ

@@ -97,7 +97,7 @@ const ScheduleManagement: React.FC = () => {
   }, [currentMonth, currentYear]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in pb-12 px-2 pt-4">
+    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in pb-12 px-2 pt-4 relative z-10">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-4">
           <div className="space-y-0.5">
@@ -127,7 +127,7 @@ const ScheduleManagement: React.FC = () => {
         </div>
       </header>
 
-      <div className="glass-card rounded-[2.5rem] p-5 md:p-10 border-white/60 shadow-xl bg-white/70 overflow-hidden">
+      <div className="glass-card rounded-[2.5rem] p-5 md:p-10 overflow-hidden">
         {viewType === 'MONTH' ? (
           <div className="animate-fade-in">
             <div className="grid grid-cols-7 gap-2 mb-4">
@@ -142,13 +142,58 @@ const ScheduleManagement: React.FC = () => {
                 const ordo = ordoForMonth.find(o => o.date === cell.dateStr);
                 const dayEvents = events.filter(e => e.date === cell.dateStr);
                 const isToday = cell.dateStr === new Date().toISOString().split('T')[0];
+                
+                // Lấy tên lễ để hiển thị (ưu tiên ordo, sau đó là dayEvents)
+                const displayName = ordo && ordo.massName !== 'Ngày thường' 
+                  ? ordo.massName 
+                  : dayEvents.length > 0 
+                    ? dayEvents[0].massName 
+                    : null;
+                
+                // Rút ngắn tên lễ nếu quá dài
+                const getShortName = (name: string) => {
+                  // Giữ nguyên tên, CSS sẽ xử lý việc cắt text
+                  return name;
+                };
+                
                 return (
-                  <div key={idx} onClick={() => { if (cell.dateStr) { setCurrentDate(new Date(cell.dateStr)); setViewType('DAY'); } }} className={`p-2 md:p-4 rounded-[1.8rem] border flex flex-col justify-between h-20 md:h-36 transition-all hover:shadow-xl cursor-pointer relative ${!cell.isCurrentMonth ? 'opacity-20' : isToday ? 'ring-2 ring-amberGold bg-amber-50/50' : 'bg-white/80 border-slate-100 hover:border-amberGold'}`}>
-                    <div className="flex justify-between items-start">
-                      <span className={`text-xs md:text-lg font-black ${idx % 7 === 0 ? 'text-crimsonRed' : 'text-slate-900'}`}>{cell.day}</span>
-                      {ordo && <div className={`w-2 h-2 md:w-4 md:h-4 rounded-full border-2 border-white shadow-sm ${getColorClass(ordo.liturgicalColor)}`}></div>}
+                  <div key={idx} onClick={() => { if (cell.dateStr) { setCurrentDate(new Date(cell.dateStr)); setViewType('DAY'); } }} className={`p-2 md:p-3 rounded-[1.8rem] border flex flex-col justify-between h-24 md:h-40 transition-all hover:shadow-xl cursor-pointer relative overflow-hidden ${!cell.isCurrentMonth ? 'opacity-20' : isToday ? 'ring-2 ring-amberGold bg-amber-50/50' : 'bg-white/80 border-slate-100 hover:border-amberGold'}`}>
+                    <div className="flex justify-between items-start mb-1">
+                      <span className={`text-xs md:text-base font-black ${idx % 7 === 0 ? 'text-crimsonRed' : 'text-slate-900'}`}>{cell.day}</span>
+                      {ordo && <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full border-2 border-white shadow-sm shrink-0 ${getColorClass(ordo.liturgicalColor)}`}></div>}
                     </div>
-                    {dayEvents.length > 0 && <div className="h-1 bg-amberGold rounded-full animate-pulse"></div>}
+                    
+                    {/* Hiển thị tên lễ phụng vụ */}
+                    {displayName && cell.isCurrentMonth && (
+                      <div className="flex-1 flex flex-col justify-start overflow-hidden min-h-0 mt-1">
+                        <p className={`text-[7px] md:text-[9px] font-bold leading-tight line-clamp-2 ${
+                          ordo && ordo.rank === 'SOLEMNITY' 
+                            ? 'text-slate-900' 
+                            : ordo && ordo.rank === 'SUNDAY'
+                            ? 'text-crimsonRed font-black'
+                            : ordo && ordo.rank === 'FEAST'
+                            ? 'text-slate-700'
+                            : 'text-slate-600'
+                        }`} title={displayName}>
+                          {getShortName(displayName)}
+                        </p>
+                        {ordo && ordo.isObligatory && (
+                          <span className="mt-0.5 text-[6px] md:text-[7px] font-black text-amberGold uppercase tracking-wider">
+                            ⭐ Lễ Buộc
+                          </span>
+                        )}
+                        {ordo && ordo.rank === 'SUNDAY' && !ordo.isObligatory && (
+                          <span className="mt-0.5 text-[6px] md:text-[7px] font-black text-crimsonRed uppercase tracking-wider">
+                            Chúa Nhật
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Hiển thị indicator cho events được tạo thủ công */}
+                    {!ordo && dayEvents.length > 0 && (
+                      <div className="h-0.5 bg-amberGold rounded-full animate-pulse mt-auto"></div>
+                    )}
                   </div>
                 );
               })}
