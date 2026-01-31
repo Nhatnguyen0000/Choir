@@ -14,7 +14,13 @@ TÔN CHỈ PHỤC VỤ & NGÔN NGỮ:
 
 export const getAIResponse = async (prompt: string) => {
   // Initialize AI client inside the function to ensure up-to-date configuration
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Vite exposes env vars prefixed with VITE_ via import.meta.env
+  const apiKey = import.meta.env.VITE_API_KEY || (import.meta.env as any).API_KEY;
+  if (!apiKey) {
+    console.error('API_KEY is not configured. Please set VITE_API_KEY environment variable in Vercel.');
+    return { text: "Xin lỗi, cấu hình API chưa được thiết lập. Vui lòng liên hệ Ban Điều Hành." };
+  }
+  const ai = new GoogleGenAI({ apiKey });
   
   try {
     const response = await ai.models.generateContent({
