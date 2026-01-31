@@ -12,7 +12,7 @@ interface AuthState {
   logout: () => void;
 }
 
-const defaultChoir: Choir = { id: 'c-thienthan', name: 'Ca đoàn Thiên Thần', parish: 'Bắc Hòa' };
+const defaultChoir: Choir = { id: 'c-thienthan', name: 'Ca đoàn Thiên Thần', parish: 'Giáo Xứ Bắsc Hòa' };
 const defaultUser: Member = {
   id: 'usr-admin',
   choirId: 'c-thienthan',
@@ -158,7 +158,7 @@ export const useNotificationStore = create<NotificationState>()(
   persist(
     (set) => ({
       notifications: [
-        { id: '1', title: 'Chào mừng anh chị!', content: 'Hệ thống Sổ Vàng Hiệp Thông Ca Đoàn Thiên Thần đã sẵn sàng.', time: 'Vừa xong', isRead: false },
+        { id: '1', title: 'Chào mừng anh chị!', content: 'Hệ thống Ca Đoàn Thiên Thần đã sẵn sàng.', time: 'Vừa xong', isRead: false },
         { id: '2', title: 'Lịch công tác', content: 'Ban Điều Hành vui lòng cập nhật lịch lễ cho tuần mới.', time: '1 giờ trước', isRead: false }
       ],
       unreadCount: 2,

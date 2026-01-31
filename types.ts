@@ -4,18 +4,13 @@ export enum AppView {
   SCHEDULE = 'SCHEDULE',
   MEMBERS = 'MEMBERS',
   FINANCE = 'FINANCE',
-  LIBRARY = 'LIBRARY',
-  ANALYTICS = 'ANALYTICS',
-  MEMBER_PORTAL = 'MEMBER_PORTAL',
+  LIBRARY = 'LIBRARY'
 }
 
 export type LiturgicalColor = 'GREEN' | 'RED' | 'WHITE' | 'VIOLET' | 'GOLD' | 'ROSE';
 export type LiturgicalRank = 'SOLEMNITY' | 'FEAST' | 'SUNDAY' | 'OPTIONAL';
 export type MemberStatus = 'ACTIVE' | 'ON_LEAVE' | 'RETIRED';
-export type VoicePart = 'Soprano' | 'Alto' | 'Tenor' | 'Bass' | 'Chưa phân phối';
-export type Instrument = 'Organ' | 'Guitar' | 'Violin' | 'Khác' | 'Không';
 
-// Added OrdoEvent interface for liturgical calendar entries
 export interface OrdoEvent {
   date: string;
   massName: string;
@@ -33,12 +28,12 @@ export interface Choir {
 
 export interface Member {
   id: string;
-  choirId: string; // ID của ca đoàn trực thuộc
+  choirId: string;
   saintName?: string;
   name: string;
   phone: string;
   gender: 'Nam' | 'Nữ';
-  role: 'Ca trưởng' | 'Ca phó' | 'Thư ký' | 'Thủ quỹ' | 'Thành viên' | 'Nhạc công';
+  role: 'Ca trưởng' | 'Ca phó' | 'Thư ký' | 'Thủ quỹ' | 'Ca viên' | 'Nhạc công';
   grade?: string;
   birthYear?: string;
   avatar?: string;
