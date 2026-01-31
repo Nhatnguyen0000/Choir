@@ -1,7 +1,7 @@
 
 import React, { useMemo } from 'react';
 import { Member, DailyAttendance, Transaction } from '../types';
-import { FileDown, TrendingUp, TrendingDown, Users, Wallet, ClipboardCheck, CheckCircle2 } from 'lucide-react';
+import { FileDown, TrendingUp, TrendingDown, Users, Wallet, ClipboardCheck, BarChart3, PieChart } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface AnalyticsManagementProps {
@@ -16,84 +16,71 @@ const AnalyticsManagement: React.FC<AnalyticsManagementProps> = ({ members, atte
     const totalIn = transactions.filter(t => t.type === 'IN').reduce((s,t) => s+t.amount, 0);
     const totalOut = transactions.filter(t => t.type === 'OUT').reduce((s,t) => s+t.amount, 0);
     const avgAttendance = attendanceData.length > 0 ? Math.round((attendanceData.reduce((sum, d) => sum + (d.records.filter(r => r.status === 'PRESENT').length), 0) / (attendanceData.length * (total || 1))) * 100) : 100;
-    return { total, active: members.filter(m => m.status === 'ACTIVE').length, balance: totalIn - totalOut, avgAttendance };
+    return { total, balance: totalIn - totalOut, avgAttendance, totalIn, totalOut };
   }, [members, attendanceData, transactions]);
 
   const xuatBaoCao = () => {
     const wb = XLSX.utils.book_new();
-    const duLieu = [['BÁO CÁO TỔNG KẾT HOẠT ĐỘNG CA ĐOÀN THIÊN THẦN'], [`Ngày trích xuất: ${new Date().toLocaleDateString('vi-VN')}`], [''], ['TIÊU CHÍ', 'SỐ LIỆU'], ['Tổng số ca viên', stats.total], ['Tỷ lệ chuyên cần', stats.avgAttendance + '%'], ['Số dư quỹ đoàn', stats.balance.toLocaleString() + ' VNĐ']];
+    const duLieu = [
+      ['TỔNG KẾT HIỆP THÔNG PHỤNG VỤ - CA ĐOÀN THIÊN THẦN'],
+      [`Ngày trích xuất: ${new Date().toLocaleDateString('vi-VN')}`],
+      [''],
+      ['HẠNG MỤC', 'SỐ LIỆU'],
+      ['Tổng số ca viên', stats.total],
+      ['Độ chuyên cần bình quân', stats.avgAttendance + '%'],
+      ['Tổng ngân thu', stats.totalIn.toLocaleString() + 'đ'],
+      ['Tổng ngân chi', stats.totalOut.toLocaleString() + 'đ'],
+      ['Số dư hiện hữu', stats.balance.toLocaleString() + 'đ']
+    ];
     const ws = XLSX.utils.aoa_to_sheet(duLieu);
-    XLSX.utils.book_append_sheet(wb, ws, "Thống kê");
-    XLSX.writeFile(wb, `Bao_Cao_Ca_Doan_${new Date().toISOString().split('T')[0]}.xlsx`);
+    XLSX.utils.book_append_sheet(wb, ws, "Tổng kết hiệp thông");
+    XLSX.writeFile(wb, `Tong_Ket_Hiep_Thong_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const metrics = [
-    { label: 'Chuyên cần', value: stats.avgAttendance + '%', icon: <ClipboardCheck size={16}/>, color: 'text-amberGold' },
-    { label: 'Ngân quỹ', value: stats.balance.toLocaleString() + 'đ', icon: <Wallet size={16}/>, color: 'text-emeraldGreen' },
-    { label: 'Tổng ca viên', value: stats.total.toString(), icon: <Users size={16}/>, color: 'text-royalBlue' },
-  ];
-
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="sacred-title text-2xl font-bold text-slate-900 italic leading-none">Phân Tích Công Tác</h1>
-          <p className="text-slate-500 text-[11px] font-bold uppercase tracking-widest mt-1 italic leading-none">Tổng hợp dữ liệu hiệp thông ca đoàn</p>
+    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in pb-12 px-2 pt-4">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-0.5">
+          <h1 className="sacred-title text-2xl md:text-3xl font-bold text-slate-900 italic">Tổng Kết Hiệp Thông</h1>
+          <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.3em]">Thống kê công tác & ngân quỹ đoàn</p>
         </div>
-        <button onClick={xuatBaoCao} className="glass-button px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all active:scale-[0.98]">
-          <FileDown size={16} /> Xuất Excel
+        <button onClick={xuatBaoCao} className="active-pill px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg hover:scale-105 transition-all">
+          <FileDown size={16} /> Xuất dữ liệu tổng kết
         </button>
-      </div>
+      </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {metrics.map((m, i) => (
-          <div key={i} className="glass-card p-4 rounded-xl border-slate-200 flex items-center justify-between">
-             <div className="space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">{m.label}</span>
-                <h3 className={`text-xl font-bold tracking-tight ${m.color}`}>{m.value}</h3>
+        {[
+          { label: 'Chuyên cần bình quân', value: stats.avgAttendance + '%', icon: <ClipboardCheck size={20}/>, color: 'text-amberGold' },
+          { label: 'Ngân quỹ minh bạch', value: stats.balance.toLocaleString() + 'đ', icon: <Wallet size={20}/>, color: 'text-emeraldGreen' },
+          { label: 'Sổ bộ anh chị em', value: stats.total.toString(), icon: <Users size={20}/>, color: 'text-royalBlue' },
+        ].map((m, i) => (
+          <div key={i} className="glass-card p-6 rounded-[2rem] border-white/60 flex flex-col gap-3 group hover:shadow-xl transition-all bg-white/70">
+             <div className={`p-3 rounded-xl w-fit bg-slate-50 ${m.color} border border-slate-100 group-hover:scale-110 transition-transform`}>{m.icon}</div>
+             <div>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{m.label}</span>
+                <h3 className={`text-2xl font-black tracking-tighter mt-1 ${m.color}`}>{m.value}</h3>
              </div>
-             <div className="p-2 rounded-lg bg-slate-50 text-slate-400 border border-slate-100">{m.icon}</div>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="glass-card p-6 rounded-xl border-slate-200 space-y-4">
-           <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2 italic leading-none">
-              <div className="w-1 h-3.5 bg-amberGold rounded-full"></div> Biểu đồ chuyên cần
-           </h3>
-           <div className="flex items-end justify-around h-32 pt-4 border-b border-slate-50">
-              {[65, 80, 55, 90, 75, 85].map((h, i) => (
-                <div key={i} className="flex flex-col items-center gap-2 w-6 group">
-                   <div className="w-full bg-slate-50 rounded h-24 relative overflow-hidden">
-                      <div className="absolute bottom-0 left-0 right-0 bg-amberGold/60 group-hover:bg-amberGold transition-all duration-700" style={{ height: `${h}%` }}></div>
-                   </div>
-                   <span className="text-[8px] font-bold text-slate-400 uppercase">T{i+1}</span>
-                </div>
-              ))}
-           </div>
+        <div className="glass-card p-8 rounded-[2.5rem] border-white/60 shadow-lg space-y-6 bg-white/70">
+           <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-2 italic"><BarChart3 size={16} className="text-amberGold" /> Biến động hiện diện</h3>
+           <div className="h-40 bg-slate-50/50 rounded-[2rem] border border-slate-100 flex items-center justify-center text-slate-300 italic text-[10px] font-black uppercase tracking-widest">Biểu đồ đang được tối ưu</div>
         </div>
-
-        <div className="glass-card p-6 rounded-xl bg-deepSlate text-white space-y-4 relative overflow-hidden">
-           <h3 className="text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 italic leading-none relative z-10">
-              <div className="w-1 h-3.5 bg-emerald-500 rounded-full"></div> Tài chính minh bạch
-           </h3>
-           <div className="space-y-3 relative z-10 pt-2">
-              <div className="flex justify-between items-center p-3 rounded-lg bg-white/5 border border-white/10">
-                 <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase leading-none mb-1">Tổng thu năm nay</p>
-                    <p className="text-lg font-bold tracking-tight">{(stats.balance + 5000000).toLocaleString()}đ</p>
-                 </div>
-                 <TrendingUp size={16} className="text-emerald-400 opacity-60" />
+        <div className="glass-card p-8 rounded-[2.5rem] bg-slate-900 text-white shadow-2xl space-y-6 relative overflow-hidden border border-white/10">
+           <h3 className="text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2 italic relative z-10 text-emerald-400"><PieChart size={16} /> Cân đối ngân thu chi</h3>
+           <div className="space-y-4 relative z-10">
+              <div className="flex justify-between items-center p-4 rounded-2xl bg-white/5 border border-white/10">
+                 <span className="text-[10px] font-bold text-slate-400 uppercase">Tổng ngân thu</span>
+                 <span className="text-xl font-black text-emerald-400">{stats.totalIn.toLocaleString()}đ</span>
               </div>
-              <div className="flex justify-between items-center p-3 rounded-lg bg-white/5 border border-white/10">
-                 <div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase leading-none mb-1">Tổng chi năm nay</p>
-                    <p className="text-lg font-bold tracking-tight">5.000.000đ</p>
-                 </div>
-                 <TrendingDown size={16} className="text-rose-400 opacity-60" />
+              <div className="flex justify-between items-center p-4 rounded-2xl bg-white/5 border border-white/10">
+                 <span className="text-[10px] font-bold text-slate-400 uppercase">Tổng ngân chi</span>
+                 <span className="text-xl font-black text-rose-400">{stats.totalOut.toLocaleString()}đ</span>
               </div>
-              <p className="text-[8px] font-bold text-emerald-400 uppercase tracking-widest text-center italic mt-2">Dữ liệu hiệp thông minh bạch AMDG</p>
            </div>
         </div>
       </div>

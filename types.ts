@@ -33,7 +33,7 @@ export interface Member {
   name: string;
   phone: string;
   gender: 'Nam' | 'Nữ';
-  role: 'Ca trưởng' | 'Ca phó' | 'Thư ký' | 'Thủ quỹ' | 'Ca viên' | 'Nhạc công';
+  role: 'Ca trưởng' | 'Ca phó' | 'Thư ký' | 'Thủ quỹ' | 'Thành viên' | 'Nhạc công';
   grade?: string;
   birthYear?: string;
   avatar?: string;
