@@ -1,26 +1,12 @@
 
 import React, { useMemo } from 'react';
 import { 
-  Users, 
-  Music, 
-  Calendar, 
-  TrendingUp, 
-  ArrowUpRight,
-  Clock,
-  MapPin,
-  ChevronRight,
-  BookOpen,
-  DollarSign,
-  BarChart3,
-  Target,
-  Zap,
-  CheckCircle2,
-  XCircle,
-  AlertCircle
+  Users, Heart, Wallet, Library, 
+  Calendar, Clock, MapPin, ChevronRight, 
+  Sparkles, Church, Quote
 } from 'lucide-react';
 import { useMemberStore, useEventStore, useFinanceStore, useLibraryStore } from '../store';
 import { AppView } from '../types';
-import Tooltip from './Tooltip';
 
 interface DashboardProps {
   onNavigate: (view: AppView) => void;
@@ -33,432 +19,113 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { songs } = useLibraryStore();
 
   const balance = useMemo(() => {
-    return transactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.amount, 0) - 
-           transactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.amount, 0);
+    return transactions.reduce((sum, t) => t.type === 'IN' ? sum + t.amount : sum - t.amount, 0);
   }, [transactions]);
 
   const avgAttendance = useMemo(() => {
-    return attendanceData.length > 0 
-      ? Math.round((attendanceData.reduce((sum, d) => sum + (d.records.filter(r => r.status === 'PRESENT').length), 0) / (attendanceData.length * (members.length || 1))) * 100)
-      : 0;
+    if (attendanceData.length === 0) return 0;
+    const totalPresents = attendanceData.reduce((sum, d) => sum + d.records.filter(r => r.status === 'PRESENT').length, 0);
+    return Math.round((totalPresents / (attendanceData.length * (members.length || 1))) * 100);
   }, [attendanceData, members.length]);
 
-  const recentTransactions = useMemo(() => {
-    return [...transactions]
-      .sort((a, b) => b.date.localeCompare(a.date))
-      .slice(0, 3);
-  }, [transactions]);
-
-  const totalIncome = useMemo(() => {
-    return transactions.filter(t => t.type === 'IN').reduce((sum, t) => sum + t.amount, 0);
-  }, [transactions]);
-
-  const totalExpense = useMemo(() => {
-    return transactions.filter(t => t.type === 'OUT').reduce((sum, t) => sum + t.amount, 0);
-  }, [transactions]);
-
-  const today = new Date().toISOString().split('T')[0];
   const upcomingEvents = useMemo(() => {
-    return [...events]
-      .filter(e => e.date >= today)
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(0, 5);
-  }, [events, today]);
-
-  const activeMembers = useMemo(() => {
-    return members.filter(m => m.status === 'ACTIVE').length;
-  }, [members]);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'PRESENT': return 'bg-emerald-500';
-      case 'ABSENT': return 'bg-rose-500';
-      case 'LATE': return 'bg-amber-500';
-      default: return 'bg-slate-300';
-    }
-  };
+    const today = new Date().toISOString().split('T')[0];
+    return events.filter(e => e.date >= today).sort((a,b) => a.date.localeCompare(b.date)).slice(0, 3);
+  }, [events]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in pb-12 relative z-10">
-      
-      {/* Header Section */}
-      <div className="px-4 pt-2">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="sacred-title text-3xl md:text-4xl font-black text-slate-900 italic leading-tight">
-              Tổng Quan <span className="text-amberGold">Hệ Thống</span>
-            </h1>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">
-              Giáo Xứ Bắc Hòa • Năm Phụng Vụ 2026
-            </p>
+    <div className="w-full space-y-8 animate-fade-in pb-12">
+      {/* Lời Chào Hiệp Thông - Glass Transparent */}
+      <section className="glass-card rounded-[2.5rem] p-10 md:p-14 border-white/60 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-10 opacity-[0.08] pointer-events-none rotate-12">
+          <Church size={240} />
+        </div>
+        <div className="relative z-10 space-y-6 max-w-4xl">
+          <div className="flex items-center gap-2.5 text-amberGold font-bold uppercase tracking-[0.4em] text-[10px]">
+            <Sparkles size={16} className="animate-pulse" /> Niên Lịch Phụng Vụ 2026
           </div>
-          <div className="flex items-center gap-3">
-            <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-200">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Hoạt Động</span>
-              </div>
-            </div>
+          <h1 className="sacred-title text-3xl md:text-5xl font-bold italic text-slate-900 leading-tight tracking-tight">Hiệp Thông Phụng Sự</h1>
+          <p className="text-slate-600 text-base md:text-lg italic leading-relaxed font-medium opacity-90 max-w-2xl">
+            "Hát mừng Chúa một bài ca mới, vì Người đã thực hiện những việc lạ lùng." (Tv 98, 1)
+          </p>
+          <div className="flex flex-wrap gap-4 pt-4">
+            <button onClick={() => onNavigate(AppView.SCHEDULE)} className="glass-button bg-amberGold/10 border-amberGold/30 text-amber-800 px-8 py-3.5 rounded-2xl text-[10px] font-bold uppercase tracking-widest">Lịch Phụng Vụ</button>
+            <button onClick={() => onNavigate(AppView.MEMBERS)} className="glass-button px-8 py-3.5 rounded-2xl text-[10px] font-bold uppercase tracking-widest text-slate-500">Ghi Danh Sổ Bộ</button>
           </div>
         </div>
+      </section>
+
+      {/* Thống Kê Hiệp Thông */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        {[
+          { label: 'Sổ bộ ca viên', value: members.length, color: 'text-royalBlue', bg: 'bg-blue-50/50', icon: <Users size={22} /> },
+          { label: 'Độ hiệp thông', value: `${avgAttendance}%`, color: 'text-rose-500', bg: 'bg-rose-50/50', icon: <Heart size={22} /> },
+          { label: 'Đoàn quỹ hiện hữu', value: `${(balance/1000).toLocaleString()}K`, color: 'text-emeraldGreen', bg: 'bg-emerald-50/50', icon: <Wallet size={22} /> },
+          { label: 'Kho tàng âm ca', value: songs.length, color: 'text-liturgicalViolet', bg: 'bg-purple-50/50', icon: <Library size={22} /> },
+        ].map((stat, idx) => (
+          <div key={idx} className={`glass-card ${stat.bg} p-7 rounded-[2rem] flex flex-col gap-5 border-white/50 hover:-translate-y-1`}>
+            <div className={`w-11 h-11 rounded-2xl bg-white/90 shadow-sm flex items-center justify-center ${stat.color} border border-white`}>
+              {stat.icon}
+            </div>
+            <div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1.5 italic leading-none">{stat.label}</p>
+              <h3 className={`text-2xl font-bold tracking-tight ${stat.color} leading-none`}>{stat.value}</h3>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Stats Grid - Top Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 px-4">
-        
-        {/* Members Stat Card */}
-        <Tooltip content="Xem danh sách ca viên" position="top">
-          <div 
-            onClick={() => onNavigate(AppView.MEMBERS)}
-            className="glass-card rounded-2xl p-6 cursor-pointer group"
-          >
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center group-hover:bg-amberGold transition-colors">
-              <Users size={22} className="text-white" />
-            </div>
-            <ChevronRight size={16} className="text-slate-300 group-hover:text-amberGold transition-colors" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10">
+        {/* Công Tác Phụng Vụ Gần Nhất */}
+        <div className="glass-card p-10 rounded-[2.5rem] space-y-8 border-white/60">
+          <div className="flex justify-between items-center border-b border-white/60 pb-5">
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-slate-900 flex items-center gap-3 italic">
+              <Calendar size={18} className="text-amberGold" /> Công Tác Sắp Tới
+            </h3>
+            <button onClick={() => onNavigate(AppView.SCHEDULE)} className="glass-button px-4 py-2 rounded-xl text-[9px] font-bold text-amberGold hover:bg-amber-50 italic uppercase tracking-widest">Toàn niên lịch</button>
           </div>
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ca Viên</p>
-            <p className="text-3xl font-black text-slate-900">{members.length}</p>
-            <div className="flex items-center gap-2 pt-2">
-              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-emerald-500 transition-all duration-500" 
-                  style={{ width: `${(activeMembers / members.length) * 100 || 0}%` }}
-                ></div>
-              </div>
-              <span className="text-[9px] font-black text-slate-500">{activeMembers} Hoạt Động</span>
-            </div>
-          </div>
-          </div>
-        </Tooltip>
-
-        {/* Library Stat Card */}
-        <Tooltip content="Xem thư viện thánh nhạc" position="top">
-          <div 
-            onClick={() => onNavigate(AppView.LIBRARY)}
-            className="glass-card rounded-2xl p-6 cursor-pointer group"
-          >
-            <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-amberGold/10 rounded-xl flex items-center justify-center group-hover:bg-amberGold transition-colors">
-              <Music size={22} className="text-amberGold group-hover:text-white transition-colors" />
-            </div>
-            <ChevronRight size={16} className="text-slate-300 group-hover:text-amberGold transition-colors" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Thánh Nhạc</p>
-            <p className="text-3xl font-black text-slate-900">{songs.length}</p>
-            <div className="flex items-center gap-2 pt-2">
-              <BookOpen size={12} className="text-slate-400" />
-              <span className="text-[9px] font-black text-slate-500">Âm bản trong thư viện</span>
-            </div>
-          </div>
-          </div>
-        </Tooltip>
-
-        {/* Attendance Stat Card */}
-        <Tooltip content="Tỷ lệ hiện diện trung bình" position="top">
-          <div className="glass-card rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center">
-              <Target size={22} className="text-emerald-500" />
-            </div>
-            <div className="px-3 py-1 bg-emerald-50 rounded-lg border border-emerald-100">
-              <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Tỷ lệ</span>
-            </div>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hiện Diện</p>
-            <p className="text-3xl font-black text-slate-900">{avgAttendance}%</p>
-            <div className="flex items-center gap-2 pt-2">
-              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-emerald-500 transition-all duration-500" 
-                  style={{ width: `${avgAttendance}%` }}
-                ></div>
-              </div>
-
-            </div>
-          </div>
-          </div>
-        </Tooltip>
-
-        {/* Finance Stat Card */}
-        <Tooltip content="Xem chi tiết ngân quỹ" position="top">
-          <div 
-            onClick={() => onNavigate(AppView.FINANCE)}
-            className="glass-card rounded-2xl p-6 text-white cursor-pointer group"
-            style={{
-              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%)',
-              borderColor: 'rgba(255, 255, 255, 0.1)',
-            }}
-          >
-            <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-              <DollarSign size={22} className="text-emerald-400" />
-            </div>
-            <ChevronRight size={16} className="text-slate-400 group-hover:text-white transition-colors" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">Ngân Quỹ</p>
-            <p className="text-3xl font-black text-white">{balance.toLocaleString()}đ</p>
-            <div className="flex items-center gap-3 pt-2 text-[9px]">
-              <div className="flex items-center gap-1">
-                <TrendingUp size={10} className="text-emerald-400" />
-                <span className="font-black text-emerald-400">{totalIncome.toLocaleString()}đ</span>
-              </div>
-              <div className="w-px h-3 bg-white/20"></div>
-              <div className="flex items-center gap-1">
-                <TrendingUp size={10} className="text-rose-400 rotate-180" />
-                <span className="font-black text-rose-400">{totalExpense.toLocaleString()}đ</span>
-              </div>
-            </div>
-          </div>
-          </div>
-        </Tooltip>
-
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-4">
-        
-        {/* Left Column - Upcoming Events */}
-        <div className="lg:col-span-2 space-y-6">
-          
-          {/* Upcoming Events Section */}
-          <div className="glass-card rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Calendar size={18} className="text-amberGold" />
-                <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Lịch Công Tác Sắp Tới</h2>
-              </div>
-              <button 
-                onClick={() => onNavigate(AppView.SCHEDULE)}
-                className="text-[10px] font-black text-amberGold uppercase tracking-widest hover:text-amberGold/80 transition-colors"
-              >
-                Xem tất cả
-              </button>
-            </div>
-            
-            <div className="divide-y divide-slate-100">
-              {upcomingEvents.length > 0 ? upcomingEvents.map((event, idx) => (
-                <div 
-                  key={event.id}
-                  className="px-6 py-4 hover:bg-slate-50/50 transition-colors cursor-pointer group"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="w-16 h-16 rounded-xl bg-slate-900 text-white flex flex-col items-center justify-center shrink-0 group-hover:bg-amberGold transition-colors">
-                      <span className="text-xl font-black leading-none">{new Date(event.date).getDate()}</span>
-                      <span className="text-[8px] font-black uppercase opacity-80 mt-0.5">
-                        Th{new Date(event.date).getMonth() + 1}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="sacred-title text-base font-bold text-slate-900 italic mb-2">
-                        {event.massName}
-                      </h3>
-                      <div className="flex flex-wrap items-center gap-3 text-[10px]">
-                        <div className="flex items-center gap-1.5 text-slate-500">
-                          <Clock size={12} />
-                          <span className="font-bold">{event.time}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-slate-500">
-                          <MapPin size={12} />
-                          <span className="font-bold">{event.location}</span>
-                        </div>
-                        {event.type === 'PRACTICE' && (
-                          <span className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded-md font-black uppercase tracking-widest text-[8px]">
-                            Tập luyện
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <ChevronRight size={16} className="text-slate-300 group-hover:text-amberGold transition-colors shrink-0" />
+          <div className="space-y-5">
+            {upcomingEvents.length > 0 ? upcomingEvents.map(event => (
+              <div key={event.id} onClick={() => onNavigate(AppView.SCHEDULE)} className="glass-card p-5 rounded-2xl hover:bg-white/80 transition-all border-white/50 group cursor-pointer flex items-center gap-5">
+                <div className="w-14 h-14 glass-button border-amberGold/20 rounded-2xl flex flex-col items-center justify-center group-hover:bg-amberGold group-hover:text-white transition-all shrink-0">
+                   <span className="text-xl font-bold leading-none">{new Date(event.date).getDate()}</span>
+                   <span className="text-[8px] uppercase font-bold opacity-60 mt-1.5 italic tracking-widest">T.{new Date(event.date).getMonth()+1}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="sacred-title text-[16px] font-bold text-slate-900 truncate italic leading-tight group-hover:text-amberGold transition-colors tracking-tight">{event.massName}</h4>
+                  <div className="flex flex-wrap gap-4 mt-2 opacity-80">
+                    <span className="flex items-center gap-1.5 text-[10px] text-slate-500 font-bold uppercase tracking-widest italic"><Clock size={14} className="text-amberGold" /> {event.time}</span>
+                    <span className="flex items-center gap-1.5 text-[10px] text-slate-500 font-bold uppercase tracking-widest italic"><MapPin size={14} className="text-slate-400" /> {event.location}</span>
                   </div>
                 </div>
-              )) : (
-                <div className="px-6 py-12 flex flex-col items-center justify-center text-center">
-                  <Calendar size={40} className="text-slate-200 mb-3" />
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    Chưa có lịch công tác
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="glass-card rounded-2xl p-6">
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-3">
-              <Zap size={18} className="text-amberGold" />
-              Thao Tác Nhanh
-            </h2>
-            <div className="grid grid-cols-2 gap-3">
-              <Tooltip content="Quản lý lịch phụng vụ và công tác" position="top">
-                <button
-                  onClick={() => onNavigate(AppView.SCHEDULE)}
-                  className="p-4 rounded-xl border-2 border-slate-200 hover:border-amberGold hover:bg-amberGold/5 transition-all text-left group w-full"
-                >
-                  <Calendar size={20} className="text-slate-400 group-hover:text-amberGold mb-2 transition-colors" />
-                  <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Lịch Công Tác</p>
-                  <p className="text-[10px] text-slate-500 mt-1">Quản lý lịch phụng vụ</p>
-                </button>
-              </Tooltip>
-              <Tooltip content="Quản lý sổ bộ và thông tin ca viên" position="top">
-                <button
-                  onClick={() => onNavigate(AppView.MEMBERS)}
-                  className="p-4 rounded-xl border-2 border-slate-200 hover:border-amberGold hover:bg-amberGold/5 transition-all text-left group w-full"
-                >
-                  <Users size={20} className="text-slate-400 group-hover:text-amberGold mb-2 transition-colors" />
-                  <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Sổ Bộ Ca Viên</p>
-                  <p className="text-[10px] text-slate-500 mt-1">Quản lý thành viên</p>
-                </button>
-              </Tooltip>
-              <Tooltip content="Thư viện bài hát và âm bản" position="top">
-                <button
-                  onClick={() => onNavigate(AppView.LIBRARY)}
-                  className="p-4 rounded-xl border-2 border-slate-200 hover:border-amberGold hover:bg-amberGold/5 transition-all text-left group w-full"
-                >
-                  <Music size={20} className="text-slate-400 group-hover:text-amberGold mb-2 transition-colors" />
-                  <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Thánh Nhạc</p>
-                  <p className="text-[10px] text-slate-500 mt-1">Thư viện bài hát</p>
-                </button>
-              </Tooltip>
-              <Tooltip content="Quản lý tài chính và ngân quỹ" position="top">
-                <button
-                  onClick={() => onNavigate(AppView.FINANCE)}
-                  className="p-4 rounded-xl border-2 border-slate-200 hover:border-amberGold hover:bg-amberGold/5 transition-all text-left group w-full"
-                >
-                  <DollarSign size={20} className="text-slate-400 group-hover:text-amberGold mb-2 transition-colors" />
-                  <p className="text-xs font-black text-slate-900 uppercase tracking-widest">Ngân Quỹ</p>
-                  <p className="text-[10px] text-slate-500 mt-1">Quản lý tài chính</p>
-                </button>
-              </Tooltip>
-            </div>
-          </div>
-
-        </div>
-
-        {/* Right Column - Activity & Summary */}
-        <div className="space-y-6">
-          
-          {/* Recent Transactions */}
-          <div className="glass-card rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <BarChart3 size={18} className="text-emerald-500" />
-                <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Giao Dịch Gần Đây</h2>
+                <ChevronRight size={20} className="text-slate-300 group-hover:text-amberGold transition-colors" />
               </div>
-            </div>
-            
-            <div className="divide-y divide-slate-100">
-              {recentTransactions.length > 0 ? recentTransactions.map((transaction) => (
-                <div key={transaction.id} className="px-6 py-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-slate-900 truncate">{transaction.description}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">
-                        {new Date(transaction.date).toLocaleDateString('vi-VN')}
-                      </p>
-                    </div>
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${
-                      transaction.type === 'IN' 
-                        ? 'bg-emerald-50 text-emerald-600' 
-                        : 'bg-rose-50 text-rose-600'
-                    }`}>
-                      {transaction.type === 'IN' ? (
-                        <TrendingUp size={12} className="text-emerald-600" />
-                      ) : (
-                        <TrendingUp size={12} className="text-rose-600 rotate-180" />
-                      )}
-                      <span className="text-[10px] font-black">
-                        {transaction.type === 'IN' ? '+' : '-'}{transaction.amount.toLocaleString()}đ
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )) : (
-                <div className="px-6 py-8 flex flex-col items-center justify-center text-center">
-                  <DollarSign size={32} className="text-slate-200 mb-2" />
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    Chưa có giao dịch
-                  </p>
-                </div>
-              )}
-            </div>
-            
-            {recentTransactions.length > 0 && (
-              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/30">
-                <button 
-                  onClick={() => onNavigate(AppView.FINANCE)}
-                  className="w-full text-[10px] font-black text-amberGold uppercase tracking-widest hover:text-amberGold/80 transition-colors"
-                >
-                  Xem chi tiết ngân quỹ →
-                </button>
+            )) : (
+              <div className="text-center py-16 space-y-3 opacity-30">
+                <Calendar size={48} className="mx-auto text-slate-300" />
+                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest italic">Chưa có công tác phụng vụ mới</p>
               </div>
             )}
           </div>
-
-          {/* Community Summary */}
-          <div 
-            className="glass-card rounded-2xl p-6"
-            style={{
-              background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.08) 100%)',
-              borderColor: 'rgba(251, 191, 36, 0.3)',
-            }}
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-amberGold rounded-xl flex items-center justify-center">
-                <Users size={20} className="text-white" />
-              </div>
-              <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Cộng Đoàn</h2>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-600">Tổng thành viên</span>
-                <span className="text-lg font-black text-slate-900">{members.length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-600">Đang hoạt động</span>
-                <span className="text-lg font-black text-emerald-600">{activeMembers}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-600">Thư viện bài hát</span>
-                <span className="text-lg font-black text-amberGold">{songs.length}</span>
-              </div>
-            </div>
-            <div className="mt-4 pt-4 border-t border-amberGold/20">
-              <button
-                onClick={() => onNavigate(AppView.MEMBERS)}
-                className="w-full py-2.5 bg-slate-900 hover:bg-amberGold text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors"
-              >
-                Quản lý thành viên
-              </button>
-            </div>
-          </div>
-
         </div>
 
-      </div>
-
-      {/* Footer Note */}
-      <div className="px-4 pt-4">
-        <div className="glass-card rounded-xl p-6 text-center">
-          <p className="text-xs font-medium text-slate-600 italic leading-relaxed">
-            "Hát khen Chúa, hỡi muôn dân trên địa cầu! Hãy phục vụ Chúa với niềm hân hoan." 
-            <span className="text-slate-400 ml-2">(Tv 100,1-2)</span>
-          </p>
-          <div className="mt-4 flex items-center justify-center gap-2">
-            <div className="w-8 h-px bg-slate-300"></div>
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">
-              Hệ thống Điều hành Ca đoàn • Bắc Hòa 2027
-            </span>
-            <div className="w-8 h-px bg-slate-300"></div>
-          </div>
+        {/* Tâm Tình Hiệp Thông */}
+        <div className="glass-card bg-amber-50/10 p-12 rounded-[2.5rem] flex flex-col justify-between border-amber-100/30 relative overflow-hidden group">
+           <Quote size={48} className="text-amberGold/20 italic mb-10 group-hover:rotate-12 transition-transform duration-500" />
+           <div className="space-y-10 relative z-10">
+              <p className="text-2xl md:text-3xl font-medium italic text-slate-800 leading-relaxed sacred-title tracking-tight opacity-90">
+                "Bình an cho anh em. Như Chúa Cha đã sai Thầy, Thầy cũng sai anh em." (Ga 20, 21)
+              </p>
+              <div className="pt-10 border-t border-amber-100/40 flex justify-between items-end">
+                 <div>
+                   <span className="text-[10px] font-bold text-amber-500 uppercase tracking-[0.5em] italic leading-none block mb-2">AMDG • 2026</span>
+                   <p className="text-[10px] text-slate-400 font-bold italic uppercase tracking-widest leading-none mt-1">Cộng đoàn Bắc Hòa</p>
+                 </div>
+                 <Church size={40} className="text-amberGold/20" />
+              </div>
+           </div>
         </div>
       </div>
-
     </div>
   );
 };

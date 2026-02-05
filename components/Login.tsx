@@ -40,74 +40,74 @@ const Login: React.FC = () => {
       };
       login(bdhUser, matchedChoir);
     } else {
-      setError('Tài khoản hoặc mật khẩu không chính xác. Xin anh chị vui lòng kiểm tra lại.');
+      setError('Tài khoản hoặc mật khẩu chưa đúng. Anh/chị vui lòng kiểm tra lại.');
     }
     setIsLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-6 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-amberGold/10 rounded-full blur-[140px]"></div>
-      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-slate-900/5 rounded-full blur-[140px]"></div>
+    <div className="min-h-screen flex items-center justify-center bg-[#f8fafc] p-6 relative overflow-hidden font-sans">
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-amberGold/5 rounded-full blur-[120px]"></div>
+      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-royalBlue/5 rounded-full blur-[120px]"></div>
 
-      <div className="w-full max-w-md space-y-12 relative z-10">
-        <div className="text-center space-y-6">
-          <div className="inline-flex p-6 bg-slate-900 rounded-[2rem] text-white shadow-2xl animate-in zoom-in duration-700">
-            <Music2 size={44} strokeWidth={2.5} />
+      <div className="w-full max-w-sm space-y-10 relative z-10">
+        <div className="text-center space-y-4">
+          <div className="inline-flex p-4 glass-card border-amberGold/30 rounded-2xl text-amberGold shadow-lg animate-in zoom-in duration-700 bg-white/60">
+            <Music2 size={36} />
           </div>
           <div className="space-y-2">
-             <h1 className="sacred-title text-4xl font-bold text-slate-900 italic tracking-tight uppercase">Sổ Vàng Hiệp Thông</h1>
-             <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.5em] italic">Niên Giám Công Tác Phụng Vụ</p>
+             <h1 className="sacred-title text-3xl font-bold text-slate-900 italic tracking-tight uppercase leading-none">Sổ Vàng Hiệp Thông</h1>
+             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em] italic leading-none">Niên Giám Công Tác Phụng Vụ</p>
           </div>
         </div>
 
-        <div className="glass-card p-12 rounded-[3.5rem] shadow-2xl bg-white/80 backdrop-blur-2xl">
-          <form onSubmit={handleLogin} className="space-y-8">
+        <div className="glass-card p-12 rounded-[3.5rem] shadow-2xl border-white/60 bg-white/70 backdrop-blur-2xl">
+          <form onSubmit={handleLogin} className="space-y-6">
             {error && (
-              <div className="p-5 bg-rose-50 border border-rose-100 rounded-3xl flex items-center gap-4 text-rose-600 text-[11px] font-bold shadow-sm animate-in fade-in slide-in-from-top-2">
-                <AlertCircle size={20} />
+              <div className="p-4 bg-rose-50/50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-[10px] font-bold shadow-sm animate-in fade-in slide-in-from-top-2">
+                <AlertCircle size={18} />
                 <span>{error}</span>
               </div>
             )}
 
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tài khoản cộng đoàn (Email)</label>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1 italic">Email cộng đoàn</label>
               <input 
                 type="text" 
                 required
                 value={account}
                 onChange={(e) => setAccount(e.target.value)}
                 placeholder="thienthan@bachoa.com"
-                className="w-full px-6 py-5 glass-card rounded-2xl text-[15px] font-bold outline-none border-white shadow-inner bg-slate-50/50 focus:ring-4 focus:ring-slate-100 transition-all" 
+                className="w-full px-5 py-4 glass-card rounded-2xl text-[14px] font-bold outline-none border-white shadow-inner bg-slate-50/30 focus:border-amberGold transition-all" 
               />
             </div>
             
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mật khẩu Sổ Vàng</label>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1 italic">Mật khẩu</label>
               <input 
                 type="password" 
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-6 py-5 glass-card rounded-2xl text-[15px] font-bold outline-none border-white shadow-inner bg-slate-50/50 focus:ring-4 focus:ring-slate-100 transition-all" 
+                className="w-full px-5 py-4 glass-card rounded-2xl text-[14px] font-bold outline-none border-white shadow-inner bg-slate-50/30 focus:border-amberGold transition-all" 
               />
             </div>
             
             <button 
               type="submit"
               disabled={isLoading}
-              className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black uppercase text-[12px] tracking-[0.25em] shadow-2xl active:scale-[0.98] hover:bg-slate-800 transition-all flex items-center justify-center gap-4 mt-6"
+              className="w-full py-4.5 bg-slate-900 text-white rounded-2xl font-bold uppercase text-[10px] tracking-[0.2em] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 mt-4"
             >
-              {isLoading ? <Loader2 className="animate-spin" size={24} /> : <> <LogIn size={24} /> Vào Hệ Thống Hiệp Thông </>}
+              {isLoading ? <Loader2 className="animate-spin" size={20} /> : <> <LogIn size={20} /> Vào Hệ Thống </>}
             </button>
           </form>
         </div>
 
-        <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-3">
            <div className="w-12 h-0.5 bg-slate-200 rounded-full"></div>
-           <p className="text-[10px] font-black text-slate-400 text-center uppercase tracking-[0.4em] italic opacity-60 leading-relaxed">
-             Mọi sự vì Vinh Danh Thiên Chúa<br/>AMDG • BẮC HÒA 2027
+           <p className="text-center text-[9px] font-bold text-slate-400 uppercase tracking-[0.4em] italic opacity-60 leading-relaxed">
+             Mọi sự vì Vinh Danh Thiên Chúa<br/>AMDG • BẮC HÒA 2026
            </p>
         </div>
       </div>

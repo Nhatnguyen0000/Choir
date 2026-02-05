@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles, Loader2, Music, Calendar, FileText, Link2 } from 'lucide-react';
 import { getAIResponse } from '../services/geminiService';
@@ -35,6 +36,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ initialPrompt, onPromptConsum
     setMessages(prev => [...prev, { role: 'user', content: prompt }]);
     setIsLoading(true);
     const response = await getAIResponse(prompt);
+    // Fix: Accessing groundingMetadata which is now provided by the updated getAIResponse service
     setMessages(prev => [...prev, { 
       role: 'ai', 
       content: response.text,
@@ -53,6 +55,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ initialPrompt, onPromptConsum
 
     const response = await getAIResponse(userMessage);
     
+    // Fix: Accessing groundingMetadata which is now provided by the updated getAIResponse service
     setMessages(prev => [...prev, { 
       role: 'ai', 
       content: response.text,

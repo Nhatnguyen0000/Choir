@@ -7,7 +7,6 @@ import {
   ChevronLeft,
   Calendar,
   MapPin,
-  // Add Music2 to imports to fix the "Cannot find name 'Music2'" error
   Music2
 } from 'lucide-react';
 import { ScheduleEvent } from '../types';
@@ -93,10 +92,9 @@ const AttendanceSelector: React.FC<AttendanceSelectorProps> = ({ event, onBack, 
         <div className="flex-1"></div>
         <div className="py-6 flex flex-col items-center gap-3">
           <div className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center">
-            {/* Music2 component is now correctly imported */}
             <Music2 size={24} className="text-amberGold" />
           </div>
-          <p className="text-center text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">Bắc Hoà 2027 • Hệ Thống Quản Trị</p>
+          <p className="text-center text-[9px] font-black text-slate-300 uppercase tracking-[0.4em]">Bắc Hoà 2027 • Hệ Thống Điều Hành</p>
         </div>
       </div>
     </div>
