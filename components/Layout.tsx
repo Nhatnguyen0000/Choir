@@ -1,10 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppView } from '../types';
 import { 
-  Music2, Bell, LayoutDashboard, Users, CalendarDays, Music, Wallet, LogOut, Sparkles
+  Music2, Bell, LayoutDashboard, Users, CalendarDays, Music, Wallet, LogOut, Sparkles, CloudSync, CheckCircle2, CloudOff
 } from 'lucide-react';
-import { useNotificationStore, useAuthStore } from '../store';
+import { useNotificationStore, useAuthStore, useAppStore } from '../store';
 
 interface LayoutProps {
   currentView: AppView;
@@ -15,14 +15,25 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }) => {
   const { notifications, unreadCount, markAsRead } = useNotificationStore();
   const { user, logout } = useAuthStore();
+  const { isCloudMode } = useAppStore();
   
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    const handleStorage = () => {
+      setSyncing(true);
+      setTimeout(() => setSyncing(false), 2000);
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   const navItems = [
     { id: AppView.DASHBOARD, label: 'Tổng quan', icon: <LayoutDashboard size={14} /> },
     { id: AppView.SCHEDULE, label: 'Lịch lễ', icon: <CalendarDays size={14} /> },
-    { id: AppView.LIBRARY, label: 'Thánh Ca ca', icon: <Music size={14} /> },
+    { id: AppView.LIBRARY, label: 'Thánh Ca', icon: <Music size={14} /> },
     { id: AppView.MEMBERS, label: 'Ca Viên', icon: <Users size={14} /> },
     { id: AppView.FINANCE, label: 'Ngân quỹ', icon: <Wallet size={14} /> },
     { id: AppView.ASSISTANT, label: 'Trợ lý AI', icon: <Sparkles size={14} /> },
@@ -63,6 +74,20 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
           </nav>
 
           <div className="flex items-center gap-2">
+            {/* Sync Indicator */}
+            <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/50 ${isCloudMode ? 'bg-emerald-50/50' : 'bg-slate-100/50'}`}>
+              {syncing ? (
+                <CloudSync size={14} className="text-amberGold animate-spin" />
+              ) : isCloudMode ? (
+                <CheckCircle2 size={14} className="text-emeraldGreen" />
+              ) : (
+                <CloudOff size={14} className="text-slate-400" />
+              )}
+              <span className="text-[7px] font-bold uppercase tracking-widest text-slate-400">
+                {syncing ? 'Đang đồng bộ...' : isCloudMode ? 'Đã hiệp thông Cloud' : 'Chế độ nội bộ'}
+              </span>
+            </div>
+
             <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 glass-button border-none rounded-lg relative text-slate-400 hover:text-slate-900 shadow-sm">
               <Bell size={16} />
               {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-amberGold rounded-full border border-white"></span>}
@@ -93,6 +118,11 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
               <p className="text-[11px] font-bold italic sacred-title text-slate-900 leading-none">{user?.name}</p>
               <p className="text-[8px] uppercase tracking-widest text-slate-400 mt-1.5 leading-none">Ban Điều Hành</p>
             </div>
+            {!isCloudMode && (
+               <div className="px-4 py-2 bg-amber-50/50 text-[7px] text-amber-700 font-bold uppercase tracking-widest text-center border-b border-amber-100">
+                 Dữ liệu đang lưu tại trình duyệt này
+               </div>
+            )}
             <button onClick={() => logout()} className="w-full flex items-center justify-center gap-2 py-3 hover:bg-rose-50 text-rose-500 text-[9px] font-bold uppercase tracking-widest italic transition-colors">
               <LogOut size={14} /> Thoát hệ thống
             </button>

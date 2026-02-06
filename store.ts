@@ -1,175 +1,288 @@
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { Member, ScheduleEvent, Song, DailyAttendance, Transaction, AttendanceRecord, Choir, Notification } from './types';
+import { supabase, isSupabaseConfigured } from './services/supabase';
+import { Member, ScheduleEvent, Song, DailyAttendance, Transaction, AppView } from './types';
 
-interface AuthState {
-  isAuthenticated: boolean;
-  user: Member | null;
-  choir: Choir | null;
-  login: (user: Member, choir: Choir) => void;
-  logout: () => void;
+interface AppState {
+  members: Member[];
+  events: ScheduleEvent[];
+  songs: Song[];
+  transactions: Transaction[];
+  attendanceData: DailyAttendance[];
+  isLoading: boolean;
+  isCloudMode: boolean;
+  
+  // Actions
+  fetchInitialData: () => Promise<void>;
+  subscribeToChanges: () => () => void;
+  
+  // Members
+  addMember: (member: Member) => Promise<void>;
+  updateMember: (member: Member) => Promise<void>;
+  deleteMember: (id: string) => Promise<void>;
+  
+  // Events
+  addEvent: (event: ScheduleEvent) => Promise<void>;
+  updateEvent: (event: ScheduleEvent) => Promise<void>;
+  deleteEvent: (id: string) => Promise<void>;
+  
+  // Songs
+  addSong: (song: Song) => Promise<void>;
+  updateSong: (song: Song) => Promise<void>;
+  deleteSong: (id: string) => Promise<void>;
+
+  // Finance
+  addTransaction: (tx: Transaction) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
+  
+  // Attendance
+  updateAttendance: (date: string, choirId: string, memberId: string, status: string) => Promise<void>;
 }
 
-const defaultChoir: Choir = { id: 'c-thienthan', name: 'Ca đoàn Thiên Thần', parish: 'Bắc Hòa' };
-const defaultUser: Member = {
-  id: 'usr-admin',
-  choirId: 'c-thienthan',
-  saintName: 'Phêrô',
-  name: 'Ban Điều Hành',
-  phone: '0901234567',
-  gender: 'Nam',
-  role: 'Ca trưởng',
-  joinDate: new Date().toISOString().split('T')[0],
-  status: 'ACTIVE'
+// Helper để lưu/tải dữ liệu local
+const LOCAL_STORAGE_KEY = 'thien_than_app_data';
+const saveLocal = (data: Partial<AppState>) => {
+  const current = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}');
+  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ ...current, ...data }));
 };
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      isAuthenticated: true, 
-      user: defaultUser,
-      choir: defaultChoir,
-      login: (user, choir) => set({ isAuthenticated: true, user, choir }),
-      logout: () => set({ isAuthenticated: true, user: defaultUser, choir: defaultChoir }), 
-    }),
-    { name: 'auth-storage-v3' }
-  )
-);
+const loadLocal = () => JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}');
 
-interface EventState {
-  events: ScheduleEvent[];
-  addEvent: (event: ScheduleEvent) => void;
-  updateEvent: (event: ScheduleEvent) => void;
-  deleteEvent: (id: string) => void;
-}
+export const useAppStore = create<AppState>((set, get) => ({
+  members: [],
+  events: [],
+  songs: [],
+  transactions: [],
+  attendanceData: [],
+  isLoading: false,
+  isCloudMode: isSupabaseConfigured,
 
-export const useEventStore = create<EventState>()(
-  persist(
-    (set) => ({
-      events: [],
-      addEvent: (event) => set((state) => ({ events: [event, ...state.events] })),
-      updateEvent: (event) => set((state) => ({ 
-        events: state.events.map(e => e.id === event.id ? event : e) 
-      })),
-      deleteEvent: (id) => set((state) => ({ 
-        events: state.events.filter(e => e.id !== id) 
-      })),
-    }),
-    { name: 'event-storage-v3' }
-  )
-);
+  fetchInitialData: async () => {
+    set({ isLoading: true });
+    
+    if (!isSupabaseConfigured) {
+      // Chế độ Local
+      const localData = loadLocal();
+      set({ 
+        members: localData.members || [],
+        events: localData.events || [],
+        songs: localData.songs || [],
+        transactions: localData.transactions || [],
+        attendanceData: localData.attendanceData || [],
+        isLoading: false,
+        isCloudMode: false
+      });
+      return;
+    }
 
-interface MemberState {
-  members: Member[];
-  attendanceData: DailyAttendance[];
-  addMember: (member: Member) => void;
-  updateMember: (member: Member) => void;
-  deleteMember: (id: string) => void;
-  updateAttendance: (date: string, choirId: string, memberId: string, status: 'PRESENT' | 'ABSENT' | 'LATE') => void;
-}
+    try {
+      const [members, events, songs, transactions, attendance] = await Promise.all([
+        supabase.from('members').select('*'),
+        supabase.from('schedule_events').select('*'),
+        supabase.from('songs').select('*'),
+        supabase.from('transactions').select('*'),
+        supabase.from('attendance').select('*')
+      ]);
 
-export const useMemberStore = create<MemberState>()(
-  persist(
-    (set) => ({
-      members: [],
-      attendanceData: [],
-      addMember: (member) => set((state) => ({ members: [member, ...state.members] })),
-      updateMember: (member) => set((state) => ({
-        members: state.members.map(m => m.id === member.id ? member : m)
-      })),
-      deleteMember: (id) => set((state) => ({
-        members: state.members.filter(m => m.id !== id)
-      })),
-      updateAttendance: (date, choirId, memberId, status) => set((state) => {
-        const existingDateIdx = state.attendanceData.findIndex(d => d.date === date && d.choirId === choirId);
-        const newRecord: AttendanceRecord = { memberId, status };
-        
-        const newAttendanceData = [...state.attendanceData];
-        if (existingDateIdx >= 0) {
-          const records = [...newAttendanceData[existingDateIdx].records];
-          const recordIdx = records.findIndex(r => r.memberId === memberId);
-          if (recordIdx >= 0) records[recordIdx] = newRecord;
-          else records.push(newRecord);
-          newAttendanceData[existingDateIdx] = { ...newAttendanceData[existingDateIdx], records };
-          return { attendanceData: newAttendanceData };
-        } else {
-          return { 
-            attendanceData: [...state.attendanceData, { date, choirId, records: [newRecord] }] 
-          };
+      const groupedAttendance: DailyAttendance[] = [];
+      const rawAttendance = attendance.data || [];
+      
+      rawAttendance.forEach((row: any) => {
+        let group = groupedAttendance.find(g => g.date === row.date && g.choirId === row.choirId);
+        if (!group) {
+          group = { date: row.date, choirId: row.choirId, records: [] };
+          groupedAttendance.push(group);
         }
-      }),
-    }),
-    { name: 'member-storage-v3' }
-  )
-);
+        group.records.push({ memberId: row.memberId, status: row.status as any });
+      });
 
-interface LibraryState {
-  songs: Song[];
-  addSong: (song: Song) => void;
-  updateSong: (song: Song) => void;
-  deleteSong: (id: string) => void;
-}
+      set({ 
+        members: (members.data as Member[]) || [], 
+        events: (events.data as ScheduleEvent[]) || [],
+        songs: (songs.data as Song[]) || [],
+        transactions: (transactions.data as Transaction[]) || [],
+        attendanceData: groupedAttendance,
+        isLoading: false,
+        isCloudMode: true
+      });
+    } catch (error) {
+      console.error('Supabase fetch failed, falling back to local:', error);
+      const localData = loadLocal();
+      set({ 
+        members: localData.members || [],
+        isLoading: false,
+        isCloudMode: false 
+      });
+    }
+  },
 
-export const useLibraryStore = create<LibraryState>()(
-  persist(
-    (set) => ({
-      songs: [],
-      addSong: (song) => set((state) => ({ songs: [song, ...state.songs] })),
-      updateSong: (song) => set((state) => ({
-        songs: state.songs.map(s => s.id === song.id ? song : s)
-      })),
-      deleteSong: (id) => set((state) => ({
-        songs: state.songs.filter(s => s.id !== id)
-      })),
-    }),
-    { name: 'library-storage-v3' }
-  )
-);
+  subscribeToChanges: () => {
+    if (!isSupabaseConfigured) return () => {};
 
-interface FinanceState {
-  transactions: Transaction[];
-  addTransaction: (transaction: Transaction) => void;
-  deleteTransaction: (id: string) => void;
-}
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+        get().fetchInitialData();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  },
 
-export const useFinanceStore = create<FinanceState>()(
-  persist(
-    (set) => ({
-      transactions: [],
-      addTransaction: (transaction) => set((state) => ({ transactions: [transaction, ...state.transactions] })),
-      deleteTransaction: (id) => set((state) => ({
-        transactions: state.transactions.filter(t => t.id !== id)
-      })),
-    }),
-    { name: 'finance-storage-v3' }
-  )
-);
+  addMember: async (member) => {
+    const newMembers = [...get().members, member];
+    set({ members: newMembers });
+    if (isSupabaseConfigured) {
+      await supabase.from('members').insert(member);
+    } else {
+      saveLocal({ members: newMembers });
+    }
+  },
 
-interface NotificationState {
-  notifications: Notification[];
-  unreadCount: number;
-  addNotification: (n: Notification) => void;
-  markAsRead: (id: string) => void;
-}
+  updateMember: async (member) => {
+    const newMembers = get().members.map(m => m.id === member.id ? member : m);
+    set({ members: newMembers });
+    if (isSupabaseConfigured) {
+      await supabase.from('members').update(member).eq('id', member.id);
+    } else {
+      saveLocal({ members: newMembers });
+    }
+  },
 
-export const useNotificationStore = create<NotificationState>()(
-  persist(
-    (set) => ({
-      notifications: [
-        { id: '1', title: 'Chào mừng anh chị!', content: 'Hệ thống Sổ Vàng Hiệp Thông đã sẵn sàng phục vụ.', time: 'Vừa xong', isRead: false },
-        { id: '2', title: 'Lịch công tác', content: 'Ban Điều Hành vui lòng cập nhật lịch lễ tuần này.', time: '1 giờ trước', isRead: false }
-      ],
-      unreadCount: 2,
-      addNotification: (n) => set((state) => ({ 
-        notifications: [n, ...state.notifications],
-        unreadCount: state.unreadCount + 1
-      })),
-      markAsRead: (id) => set((state) => ({
-        notifications: state.notifications.map(n => n.id === id ? { ...n, isRead: true } : n),
-        unreadCount: Math.max(0, state.unreadCount - 1)
-      })),
-    }),
-    { name: 'notification-storage-v3' }
-  )
-);
+  deleteMember: async (id) => {
+    const newMembers = get().members.filter(m => m.id !== id);
+    set({ members: newMembers });
+    if (isSupabaseConfigured) {
+      await supabase.from('members').delete().eq('id', id);
+    } else {
+      saveLocal({ members: newMembers });
+    }
+  },
+
+  addEvent: async (event) => {
+    const newEvents = [...get().events, event];
+    set({ events: newEvents });
+    if (isSupabaseConfigured) {
+      await supabase.from('schedule_events').insert(event);
+    } else {
+      saveLocal({ events: newEvents });
+    }
+  },
+
+  updateEvent: async (event) => {
+    const newEvents = get().events.map(e => e.id === event.id ? event : e);
+    set({ events: newEvents });
+    if (isSupabaseConfigured) {
+      await supabase.from('schedule_events').update(event).eq('id', event.id);
+    } else {
+      saveLocal({ events: newEvents });
+    }
+  },
+
+  deleteEvent: async (id) => {
+    const newEvents = get().events.filter(e => e.id !== id);
+    set({ events: newEvents });
+    if (isSupabaseConfigured) {
+      await supabase.from('schedule_events').delete().eq('id', id);
+    } else {
+      saveLocal({ events: newEvents });
+    }
+  },
+
+  addSong: async (song) => {
+    const newSongs = [...get().songs, song];
+    set({ songs: newSongs });
+    if (isSupabaseConfigured) {
+      await supabase.from('songs').insert(song);
+    } else {
+      saveLocal({ songs: newSongs });
+    }
+  },
+
+  updateSong: async (song) => {
+    const newSongs = get().songs.map(s => s.id === song.id ? song : s);
+    set({ songs: newSongs });
+    if (isSupabaseConfigured) {
+      await supabase.from('songs').update(song).eq('id', song.id);
+    } else {
+      saveLocal({ songs: newSongs });
+    }
+  },
+
+  deleteSong: async (id) => {
+    const newSongs = get().songs.filter(s => s.id !== id);
+    set({ songs: newSongs });
+    if (isSupabaseConfigured) {
+      await supabase.from('songs').delete().eq('id', id);
+    } else {
+      saveLocal({ songs: newSongs });
+    }
+  },
+
+  addTransaction: async (tx) => {
+    const newTransactions = [...get().transactions, tx];
+    set({ transactions: newTransactions });
+    if (isSupabaseConfigured) {
+      await supabase.from('transactions').insert(tx);
+    } else {
+      saveLocal({ transactions: newTransactions });
+    }
+  },
+
+  deleteTransaction: async (id) => {
+    const newTransactions = get().transactions.filter(t => t.id !== id);
+    set({ transactions: newTransactions });
+    if (isSupabaseConfigured) {
+      await supabase.from('transactions').delete().eq('id', id);
+    } else {
+      saveLocal({ transactions: newTransactions });
+    }
+  },
+
+  updateAttendance: async (date, choirId, memberId, status) => {
+    const currentData = [...get().attendanceData];
+    let day = currentData.find(d => d.date === date && d.choirId === choirId);
+    
+    if (!day) {
+      day = { date, choirId, records: [] };
+      currentData.push(day);
+    }
+    
+    const recordIdx = day.records.findIndex(r => r.memberId === memberId);
+    if (recordIdx >= 0) {
+      day.records[recordIdx].status = status as any;
+    } else {
+      day.records.push({ memberId, status: status as any });
+    }
+    
+    set({ attendanceData: currentData });
+
+    if (isSupabaseConfigured) {
+      await supabase.from('attendance').upsert({ date, choirId, memberId, status });
+    } else {
+      saveLocal({ attendanceData: currentData });
+    }
+  }
+}));
+
+export const useMemberStore = useAppStore;
+export const useEventStore = useAppStore;
+export const useFinanceStore = useAppStore;
+export const useLibraryStore = useAppStore;
+
+export const useAuthStore = create<any>((set) => ({
+  isAuthenticated: true,
+  user: { name: 'Ban Điều Hành', role: 'Ca trưởng' },
+  login: () => set({ isAuthenticated: true }),
+  logout: () => set({ isAuthenticated: false }),
+}));
+
+export const useNotificationStore = create<any>((set) => ({
+  notifications: [
+    { id: '1', title: 'Hệ thống hiệp thông Cloud', content: isSupabaseConfigured ? 'Kết nối Cloud hoạt động.' : 'Đang sử dụng bộ nhớ nội bộ.', isRead: false }
+  ],
+  unreadCount: 1,
+  markAsRead: (id: string) => set({ unreadCount: 0 })
+}));
