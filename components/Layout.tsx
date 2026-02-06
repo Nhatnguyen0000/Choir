@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
 import { AppView } from '../types';
 import { 
-  Music2, Bell, LayoutDashboard, Users, CalendarDays, Music, Wallet, LogOut, Sparkles, CloudSync, CheckCircle2, CloudOff
+  Music2, Bell, LayoutDashboard, Users, CalendarDays, Music, Wallet, LogOut, Sparkles, RefreshCw, CheckCircle2, CloudOff
 } from 'lucide-react';
 import { useNotificationStore, useAuthStore, useAppStore } from '../store';
+import React, { useState, useEffect } from 'react';
 
 interface LayoutProps {
   currentView: AppView;
@@ -77,7 +77,7 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
             {/* Sync Indicator */}
             <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/50 ${isCloudMode ? 'bg-emerald-50/50' : 'bg-slate-100/50'}`}>
               {syncing ? (
-                <CloudSync size={14} className="text-amberGold animate-spin" />
+                <RefreshCw size={14} className="text-amberGold animate-spin" />
               ) : isCloudMode ? (
                 <CheckCircle2 size={14} className="text-emeraldGreen" />
               ) : (
