@@ -100,7 +100,7 @@ COMMIT;`;
                 </h4>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
                    <p className="text-[10px] text-slate-500 leading-relaxed italic">
-                     Mở file <code className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-800 font-bold">.env</code> trong thư mục gốc và dán các mã từ <strong>Supabase Project Settings -> API</strong>:
+                     Mở file <code className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-800 font-bold">.env</code> trong thư mục gốc và dán các mã từ <strong>Supabase Project Settings {"->"} API</strong>:
                    </p>
                    <ul className="text-[10px] space-y-1 font-mono bg-slate-900 text-slate-300 p-3 rounded-xl overflow-x-auto">
                      <li>SUPABASE_URL=https://...</li>
