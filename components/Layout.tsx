@@ -1,7 +1,7 @@
 
 import { AppView } from '../types';
 import { 
-  Music2, Bell, LayoutDashboard, Users, CalendarDays, Music, Wallet, LogOut, Sparkles, RefreshCw, CheckCircle2, CloudOff
+  Music2, Bell, LayoutDashboard, Users, CalendarDays, Music, Wallet, LogOut, Sparkles, RefreshCw, CheckCircle2, CloudOff, AlertTriangle
 } from 'lucide-react';
 import { useNotificationStore, useAuthStore, useAppStore } from '../store';
 import React, { useState, useEffect } from 'react';
@@ -15,20 +15,10 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }) => {
   const { notifications, unreadCount, markAsRead } = useNotificationStore();
   const { user, logout } = useAuthStore();
-  const { isCloudMode } = useAppStore();
+  const { isCloudMode, realtimeStatus, isLoading } = useAppStore();
   
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-
-  useEffect(() => {
-    const handleStorage = () => {
-      setSyncing(true);
-      setTimeout(() => setSyncing(false), 2000);
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
 
   const navItems = [
     { id: AppView.DASHBOARD, label: 'Tổng quan', icon: <LayoutDashboard size={14} /> },
@@ -75,16 +65,23 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
 
           <div className="flex items-center gap-2">
             {/* Sync Indicator */}
-            <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/50 ${isCloudMode ? 'bg-emerald-50/50' : 'bg-slate-100/50'}`}>
-              {syncing ? (
+            <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/50 ${
+              realtimeStatus === 'CONNECTED' ? 'bg-emerald-50/50' : 
+              realtimeStatus === 'ERROR' ? 'bg-rose-50/50' : 'bg-slate-100/50'
+            }`}>
+              {isLoading || realtimeStatus === 'CONNECTING' ? (
                 <RefreshCw size={14} className="text-amberGold animate-spin" />
-              ) : isCloudMode ? (
+              ) : realtimeStatus === 'CONNECTED' ? (
                 <CheckCircle2 size={14} className="text-emeraldGreen" />
+              ) : realtimeStatus === 'ERROR' ? (
+                <AlertTriangle size={14} className="text-rose-500" />
               ) : (
                 <CloudOff size={14} className="text-slate-400" />
               )}
               <span className="text-[7px] font-bold uppercase tracking-widest text-slate-400">
-                {syncing ? 'Đang đồng bộ...' : isCloudMode ? 'Đã hiệp thông Cloud' : 'Chế độ nội bộ'}
+                {isLoading ? 'Đang tải...' : 
+                 realtimeStatus === 'CONNECTED' ? 'Cloud Trực Tuyến' : 
+                 realtimeStatus === 'ERROR' ? 'Lỗi Kết Nối' : 'Chế độ Nội bộ'}
               </span>
             </div>
 
@@ -116,11 +113,11 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
           <div className="absolute top-14 right-4 md:right-8 w-48 glass-card rounded-2xl shadow-2xl overflow-hidden border-white/50 z-[110] animate-in fade-in zoom-in-95">
             <div className="p-4 bg-white/30 border-b border-slate-100 text-center">
               <p className="text-[11px] font-bold italic sacred-title text-slate-900 leading-none">{user?.name}</p>
-              <p className="text-[8px] uppercase tracking-widest text-slate-400 mt-1.5 leading-none">Ban Điều Hành</p>
+              <p className="text-[8px] uppercase tracking-widest text-slate-400 mt-1.5 leading-none">{user?.role || 'Ban Điều Hành'}</p>
             </div>
             {!isCloudMode && (
                <div className="px-4 py-2 bg-amber-50/50 text-[7px] text-amber-700 font-bold uppercase tracking-widest text-center border-b border-amber-100">
-                 Dữ liệu đang lưu tại trình duyệt này
+                 Offline: Dữ liệu lưu tại máy
                </div>
             )}
             <button onClick={() => logout()} className="w-full flex items-center justify-center gap-2 py-3 hover:bg-rose-50 text-rose-500 text-[9px] font-bold uppercase tracking-widest italic transition-colors">

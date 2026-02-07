@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { AppView } from './types';
 import Layout from './components/Layout';
@@ -12,18 +13,22 @@ import { useAuthStore, useAppStore } from './store';
 
 const App: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
-  const { fetchInitialData, subscribeToChanges } = useAppStore();
+  const { fetchInitialData, subscribeToChanges, isCloudMode } = useAppStore();
   const [currentView, setCurrentView] = React.useState<AppView>(AppView.DASHBOARD);
 
   useEffect(() => {
     if (isAuthenticated) {
+      console.log("App Khởi tạo: Loading dữ liệu...");
       fetchInitialData();
+      
+      // Chỉ đăng ký thay đổi nếu ở chế độ Cloud
       const unsubscribe = subscribeToChanges();
+      
       return () => {
         if (typeof unsubscribe === 'function') unsubscribe();
       };
     }
-  }, [isAuthenticated, fetchInitialData, subscribeToChanges]);
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return <Login />;
