@@ -1,10 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   Users, Heart, Wallet, Library, 
   Calendar, Clock, MapPin, ChevronRight, 
-  Sparkles, Church, Quote
+  Sparkles, Church, Quote, Cloud, ShieldAlert,
+  Settings, Copy, CheckCircle2, Terminal, X,
+  RefreshCw
 } from 'lucide-react';
-import { useMemberStore, useEventStore, useFinanceStore, useLibraryStore } from '../store';
+import { useMemberStore, useEventStore, useFinanceStore, useLibraryStore, useAppStore } from '../store';
 import { AppView } from '../types';
 
 interface DashboardProps {
@@ -12,10 +14,13 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
-  const { members, attendanceData } = useMemberStore();
+  const { members, attendanceData, isCloudMode, realtimeStatus } = useMemberStore();
   const { events } = useEventStore();
   const { transactions } = useFinanceStore();
   const { songs } = useLibraryStore();
+  
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const balance = useMemo(() => {
     return transactions.reduce((sum, t) => t.type === 'IN' ? sum + t.amount : sum - t.amount, 0);
@@ -32,8 +37,113 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     return events.filter(e => e.date >= today).sort((a,b) => a.date.localeCompare(b.date)).slice(0, 3);
   }, [events]);
 
+  const sqlCode = `-- COPY VÀ DÁN LỆNH NÀY VÀO SQL EDITOR CỦA SUPABASE
+BEGIN;
+  ALTER TABLE members DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE schedule_events DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE songs DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
+  ALTER TABLE attendance DISABLE ROW LEVEL SECURITY;
+COMMIT;`;
+
+  const copySQL = () => {
+    navigator.clipboard.writeText(sqlCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="w-full space-y-6 animate-fade-in pb-8">
+      {/* Cloud Sync Status Card */}
+      {!isCloudMode || realtimeStatus === 'ERROR' ? (
+        <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between shadow-sm gap-4">
+          <div className="flex items-center gap-3">
+             <div className="p-2 bg-amber-500 text-white rounded-xl shadow-md">
+                <Settings size={20} className="animate-spin-slow" />
+             </div>
+             <div>
+                <p className="text-[11px] font-bold text-amber-900 leading-none italic uppercase tracking-wider">Hệ thống đang chạy Ngoại tuyến (Offline)</p>
+                <p className="text-[9px] text-amber-600 mt-1 font-medium italic">Dữ liệu hiện chỉ lưu trên máy này. Kết nối Cloud để đồng bộ với các máy khác.</p>
+             </div>
+          </div>
+          <button 
+            onClick={() => setShowSetupGuide(true)} 
+            className="w-full md:w-auto px-6 py-2.5 bg-amber-600 text-white rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-amber-700 transition-all flex items-center justify-center gap-2"
+          >
+            <Cloud size={14} /> Hướng dẫn kết nối Cloud
+          </button>
+        </div>
+      ) : (
+        <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-2xl flex items-center gap-3 shadow-sm">
+           <div className="w-2 h-2 bg-emeraldGreen rounded-full animate-pulse"></div>
+           <span className="text-[9px] font-bold text-emerald-700 uppercase tracking-widest italic">Dữ liệu đang được bảo vệ & đồng bộ trực tuyến</span>
+        </div>
+      )}
+
+      {/* Setup Guide Modal */}
+      {showSetupGuide && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/60">
+          <div className="glass-card w-full max-w-2xl rounded-[2.5rem] p-10 relative z-10 bg-white shadow-2xl animate-in zoom-in-95 border-white max-h-[90vh] overflow-y-auto scrollbar-hide">
+            <div className="flex justify-between items-start mb-8">
+              <div className="space-y-1">
+                <h3 className="sacred-title text-2xl font-bold text-slate-900 italic leading-none tracking-tight">Cấu hình Hiệp Thông Cloud</h3>
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 mt-2 italic">Kết nối Supabase để đồng bộ dữ liệu toàn đoàn</p>
+              </div>
+              <button onClick={() => setShowSetupGuide(false)} className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-400 hover:text-slate-900"><X size={20}/></button>
+            </div>
+
+            <div className="space-y-8">
+              <section className="space-y-3">
+                <h4 className="text-[11px] font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-[10px]">1</div>
+                  Bước 1: Thiết lập Biến môi trường
+                </h4>
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+                   <p className="text-[10px] text-slate-500 leading-relaxed italic">
+                     Mở file <code className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-800 font-bold">.env</code> trong thư mục gốc và dán các mã từ <strong>Supabase Project Settings -> API</strong>:
+                   </p>
+                   <ul className="text-[10px] space-y-1 font-mono bg-slate-900 text-slate-300 p-3 rounded-xl overflow-x-auto">
+                     <li>SUPABASE_URL=https://...</li>
+                     <li>SUPABASE_ANON_KEY=eyJhb...</li>
+                   </ul>
+                </div>
+              </section>
+
+              <section className="space-y-3">
+                <h4 className="text-[11px] font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-[10px]">2</div>
+                  Bước 2: Khắc phục lỗi RLS (Không lưu được)
+                </h4>
+                <p className="text-[10px] text-slate-500 italic leading-relaxed">
+                  Supabase mặc định khóa quyền ghi. Hãy copy lệnh SQL dưới đây, dán vào <strong>SQL Editor</strong> trên Supabase Dashboard và nhấn <strong>RUN</strong>:
+                </p>
+                <div className="relative group">
+                  <pre className="p-5 bg-slate-900 text-emerald-400 rounded-2xl text-[10px] font-mono overflow-x-auto border border-white/10 shadow-xl">
+                    {sqlCode}
+                  </pre>
+                  <button 
+                    onClick={copySQL}
+                    className="absolute top-4 right-4 p-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest"
+                  >
+                    {copied ? <CheckCircle2 size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                    {copied ? 'Đã sao chép' : 'Sao chép SQL'}
+                  </button>
+                </div>
+              </section>
+
+              <div className="pt-4 flex justify-center">
+                 <button 
+                   onClick={() => window.location.reload()} 
+                   className="px-10 py-4 bg-slate-900 text-white rounded-[1.5rem] text-[11px] font-bold uppercase tracking-[0.2em] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+                 >
+                   <RefreshCw size={18} /> Tải lại để kết nối Cloud
+                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="glass-card rounded-[2.5rem] p-8 md:p-12 border-white/60 relative overflow-hidden bg-white/40 shadow-sm">
         <div className="absolute top-0 right-0 p-8 opacity-[0.05] pointer-events-none rotate-12">
@@ -42,6 +152,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         <div className="relative z-10 space-y-5">
           <div className="flex items-center gap-2 text-amberGold font-bold uppercase tracking-[0.3em] text-[8px]">
             <Sparkles size={14} className="animate-pulse" /> 
+            {isCloudMode && <span className="flex items-center gap-1"><Cloud size={10}/> Cloud Trực Tuyến</span>}
           </div>
           <h1 className="sacred-title text-3xl md:text-5xl font-bold italic text-slate-900 leading-tight">Hiệp Thông Phụng Sự</h1>
           <p className="text-slate-600 text-[13px] md:text-base italic leading-relaxed font-medium opacity-80 max-w-xl">

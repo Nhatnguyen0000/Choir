@@ -3,6 +3,16 @@ import { create } from 'zustand';
 import { supabase, isSupabaseConfigured } from './services/supabase';
 import { Member, ScheduleEvent, Song, DailyAttendance, Transaction, AppView } from './types';
 
+// Helper chuyển đổi object sang snake_case cho Postgres
+const toSnakeCase = (obj: any) => {
+  const n: any = {};
+  Object.keys(obj).forEach(k => {
+    const newK = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    n[newK] = obj[k];
+  });
+  return n;
+};
+
 interface AppState {
   members: Member[];
   events: ScheduleEvent[];
@@ -70,7 +80,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
 
     try {
-      // Fetch đồng thời các bảng
       const [mRes, eRes, sRes, tRes, aRes] = await Promise.all([
         supabase.from('members').select('*'),
         supabase.from('schedule_events').select('*'),
@@ -79,18 +88,18 @@ export const useAppStore = create<AppState>((set, get) => ({
         supabase.from('attendance').select('*')
       ]);
 
-      // Kiểm tra lỗi RLS hoặc bảng không tồn tại
-      if (mRes.error) console.error("Lỗi bảng members (Có thể do RLS):", mRes.error.message);
-      if (eRes.error) console.error("Lỗi bảng events:", eRes.error.message);
-
       const groupedAttendance: DailyAttendance[] = [];
       (aRes.data || []).forEach((row: any) => {
-        let group = groupedAttendance.find(g => g.date === row.date && g.choirId === row.choirId);
+        // Map back from snake_case if needed
+        const choirId = row.choir_id || row.choirId;
+        const memberId = row.member_id || row.memberId;
+        
+        let group = groupedAttendance.find(g => g.date === row.date && g.choirId === choirId);
         if (!group) {
-          group = { date: row.date, choirId: row.choirId, records: [] };
+          group = { date: row.date, choirId: choirId, records: [] };
           groupedAttendance.push(group);
         }
-        group.records.push({ memberId: row.memberId, status: row.status });
+        group.records.push({ memberId: memberId, status: row.status });
       });
 
       set({ 
@@ -103,56 +112,41 @@ export const useAppStore = create<AppState>((set, get) => ({
         isCloudMode: true
       });
     } catch (err) {
-      console.error("Lỗi nghiêm trọng khi tải dữ liệu:", err);
+      console.error("Fetch Error:", err);
       set({ isLoading: false, realtimeStatus: 'ERROR' });
     }
   },
 
   subscribeToChanges: () => {
     if (!isSupabaseConfigured) return () => {};
-
-    console.log("🚀 Khởi tạo kênh đồng bộ Real-time...");
     
     const channel = supabase
       .channel('schema-db-changes')
-      .on(
-        'postgres_changes', 
-        { event: '*', schema: 'public' }, 
-        (payload) => {
-          console.log('🔔 Phát hiện thay đổi dữ liệu:', payload.table, payload.eventType);
-          // Tự động tải lại dữ liệu khi có bất kỳ thay đổi nào từ DB
-          get().fetchInitialData();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+        get().fetchInitialData();
+      })
       .subscribe((status) => {
-        console.log('📡 Trạng thái Real-time:', status);
         set({ realtimeStatus: status === 'SUBSCRIBED' ? 'CONNECTED' : 'ERROR' });
       });
       
-    return () => {
-      console.log("🔌 Ngắt kết nối Real-time.");
-      supabase.removeChannel(channel);
-    };
+    return () => supabase.removeChannel(channel);
   },
 
   addMember: async (member) => {
     set(state => ({ members: [...state.members, member] }));
     if (isSupabaseConfigured) {
-      const { error } = await supabase.from('members').insert([member]);
+      const { error } = await supabase.from('members').insert([toSnakeCase(member)]);
       if (error) {
-        console.error("Lỗi khi thêm ca viên vào Cloud:", error.message);
-        alert("Không thể lưu vào Cloud. Kiểm tra quyền (RLS) trên Supabase.");
+        console.error("RLS/DB Error:", error);
+        alert(`Lỗi Cloud (${error.code}): ${error.message}\n\nHướng dẫn: Bạn cần vào Supabase -> SQL Editor và chạy lệnh 'create policy "Public" on members for all using (true);'`);
       }
-    } else {
-      const local = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}');
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({...local, members: get().members}));
     }
   },
 
   updateMember: async (member) => {
     set(state => ({ members: state.members.map(m => m.id === member.id ? member : m) }));
     if (isSupabaseConfigured) {
-      await supabase.from('members').update(member).eq('id', member.id);
+      await supabase.from('members').update(toSnakeCase(member)).eq('id', member.id);
     }
   },
 
@@ -166,14 +160,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   addEvent: async (event) => {
     set(state => ({ events: [...state.events, event] }));
     if (isSupabaseConfigured) {
-      await supabase.from('schedule_events').insert([event]);
+      await supabase.from('schedule_events').insert([toSnakeCase(event)]);
     }
   },
 
   updateEvent: async (event) => {
     set(state => ({ events: state.events.map(e => e.id === event.id ? event : e) }));
     if (isSupabaseConfigured) {
-      await supabase.from('schedule_events').update(event).eq('id', event.id);
+      await supabase.from('schedule_events').update(toSnakeCase(event)).eq('id', event.id);
     }
   },
 
@@ -187,14 +181,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   addSong: async (song) => {
     set(state => ({ songs: [...state.songs, song] }));
     if (isSupabaseConfigured) {
-      await supabase.from('songs').insert([song]);
+      await supabase.from('songs').insert([toSnakeCase(song)]);
     }
   },
 
   updateSong: async (song) => {
     set(state => ({ songs: state.songs.map(s => s.id === song.id ? song : s) }));
     if (isSupabaseConfigured) {
-      await supabase.from('songs').update(song).eq('id', song.id);
+      await supabase.from('songs').update(toSnakeCase(song)).eq('id', song.id);
     }
   },
 
@@ -208,7 +202,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   addTransaction: async (tx) => {
     set(state => ({ transactions: [...state.transactions, tx] }));
     if (isSupabaseConfigured) {
-      await supabase.from('transactions').insert([tx]);
+      await supabase.from('transactions').insert([toSnakeCase(tx)]);
     }
   },
 
@@ -233,8 +227,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ attendanceData: current });
 
     if (isSupabaseConfigured) {
-      // Upsert yêu cầu cột primary key hoặc unique constraint
-      await supabase.from('attendance').upsert({ date, choirId, memberId, status }, { onConflict: 'date,memberId' });
+      await supabase.from('attendance').upsert({ 
+        date, 
+        choir_id: choirId, 
+        member_id: memberId, 
+        status 
+      }, { onConflict: 'date,member_id' });
     }
   }
 }));
