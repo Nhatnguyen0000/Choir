@@ -8,13 +8,18 @@ export default defineConfig(({ mode }) => {
   // Fix: Property 'cwd' does not exist on type 'Process'. Cast to any to access the Node.js cwd method safely in config.
   const env = loadEnv(mode, (process as any).cwd(), '');
   
+  const supabaseUrl = (env.VITE_SUPABASE_URL ?? env.SUPABASE_URL ?? '').trim();
+  const supabaseAnonKey = (env.VITE_SUPABASE_ANON_KEY ?? env.SUPABASE_ANON_KEY ?? '').trim();
+
   return {
     plugins: [react()],
     define: {
-      // Đảm bảo luôn trả về chuỗi, kể cả khi biến môi trường chưa được thiết lập
       'process.env.API_KEY': JSON.stringify(env.API_KEY || process.env.API_KEY || ''),
       'process.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL || process.env.SUPABASE_URL || ''),
       'process.env.SUPABASE_ANON_KEY': JSON.stringify(env.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ''),
+      // Ép inject vào client để trạng thái Supabase luôn đúng
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(supabaseAnonKey),
     },
   };
 });

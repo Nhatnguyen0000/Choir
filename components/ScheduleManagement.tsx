@@ -1,14 +1,16 @@
 
 import React, { useState, useMemo } from 'react';
+/* Added RefreshCw to imports */
 import { 
   Plus, ChevronLeft, ChevronRight, X, Trash2, Edit2, MapPin, 
   Clock, ChevronDown, Church, Bookmark, 
   Calendar as CalendarIcon, Sparkles, Layers, Bell, CheckCircle2,
-  CalendarCheck
+  CalendarCheck, Search, Globe, RefreshCw
 } from 'lucide-react';
-import { useEventStore } from '../store';
+import { useEventStore, useAppStore } from '../store';
 import { getOrdoForMonth } from '../services/ordoService';
-import { LiturgicalColor, ScheduleEvent, LiturgicalRank } from '../types';
+import { LiturgicalColor, ScheduleEvent, LiturgicalRank, AppView } from '../types';
+import { getAIResponse } from '../services/geminiService';
 
 type ViewType = 'MONTH' | 'LIST';
 
@@ -19,6 +21,7 @@ const ScheduleManagement: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
   const [selectedDayDate, setSelectedDayDate] = useState<string | null>(new Date(2026, 0, 1).toISOString().split('T')[0]);
+  const [isSearchingLiturgy, setIsSearchingLiturgy] = useState(false);
   
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
@@ -48,6 +51,19 @@ const ScheduleManagement: React.FC = () => {
     const newDate = new Date(currentDate);
     newDate.setMonth(newDate.getMonth() + direction);
     setCurrentDate(newDate);
+  };
+
+  const handleSearchLiturgy = async () => {
+    if (!selectedDayDate) return;
+    setIsSearchingLiturgy(true);
+    const dateObj = new Date(selectedDayDate);
+    const prompt = `Thông tin Phụng vụ chi tiết cho ngày ${dateObj.toLocaleDateString('vi-VN')} năm 2026 tại Giáo hội Công giáo Việt Nam là gì? Có lễ đặc biệt nào không?`;
+    
+    // Ở đây ta sẽ điều hướng sang trang AI Assistant với prompt đã được điền sẵn
+    // Để đơn giản, ta chỉ cần gọi AI và hiển thị thông báo hoặc mở tab mới.
+    // Trong kiến trúc này, ta sẽ dùng store để chuyển hướng.
+    window.location.hash = `#assistant?q=${encodeURIComponent(prompt)}`;
+    setIsSearchingLiturgy(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -159,9 +175,22 @@ const ScheduleManagement: React.FC = () => {
 
           <div className="lg:col-span-4 space-y-4">
              <div className="glass-card rounded-[2.5rem] border-white/60 shadow-sm p-8 bg-white/40 flex flex-col min-h-[400px]">
-                <div className="flex items-center gap-3 mb-8 text-slate-400 border-b border-white/40 pb-4">
-                  <Bookmark size={18} className="text-amberGold" />
-                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-900 italic">Chi Tiết Ngày Phụng Vụ</h3>
+                <div className="flex items-center justify-between mb-8 border-b border-white/40 pb-4">
+                  <div className="flex items-center gap-3 text-slate-400">
+                    <Bookmark size={18} className="text-amberGold" />
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-900 italic">Chi Tiết Ngày Phụng Vụ</h3>
+                  </div>
+                  {selectedDayDate && (
+                    <button 
+                      onClick={handleSearchLiturgy}
+                      disabled={isSearchingLiturgy}
+                      className="p-2 bg-amber-100/50 text-amberGold rounded-xl hover:bg-amber-100 transition-all flex items-center gap-2 text-[8px] font-bold uppercase"
+                      title="Tìm kiếm thông tin trực tuyến"
+                    >
+                      {isSearchingLiturgy ? <RefreshCw className="animate-spin" size={12}/> : <Globe size={12}/>}
+                      Tra cứu AI
+                    </button>
+                  )}
                 </div>
                 
                 {selectedDayDate ? (

@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { AppView } from './types';
 import Layout from './components/Layout';
@@ -8,27 +7,24 @@ import FinanceManagement from './components/FinanceManagement';
 import LibraryManagement from './components/LibraryManagement';
 import ScheduleManagement from './components/ScheduleManagement';
 import AIAssistant from './components/AIAssistant';
+import Updates from './components/Updates';
 import Login from './components/Login';
 import { useAuthStore, useAppStore } from './store';
 
 const App: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
-  const { fetchInitialData, subscribeToChanges, isCloudMode } = useAppStore();
+  const { fetchInitialData, subscribeToChanges } = useAppStore();
   const [currentView, setCurrentView] = React.useState<AppView>(AppView.DASHBOARD);
 
   useEffect(() => {
     if (isAuthenticated) {
-      console.log("App Khởi tạo: Loading dữ liệu...");
       fetchInitialData();
-      
-      // Chỉ đăng ký thay đổi nếu ở chế độ Cloud
       const unsubscribe = subscribeToChanges();
-      
       return () => {
-        if (typeof unsubscribe === 'function') unsubscribe();
+        if (unsubscribe) unsubscribe();
       };
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchInitialData, subscribeToChanges]);
 
   if (!isAuthenticated) {
     return <Login />;
@@ -42,6 +38,7 @@ const App: React.FC = () => {
       case AppView.FINANCE: return <FinanceManagement />;
       case AppView.LIBRARY: return <LibraryManagement />;
       case AppView.ASSISTANT: return <AIAssistant />;
+      case AppView.UPDATES: return <Updates />;
       default: return <Dashboard onNavigate={setCurrentView} />;
     }
   };

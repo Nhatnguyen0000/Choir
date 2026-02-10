@@ -1,14 +1,23 @@
-
 import { create } from 'zustand';
 import { supabase, isSupabaseConfigured } from './services/supabase';
 import { Member, ScheduleEvent, Song, DailyAttendance, Transaction, AppView } from './types';
 
-// Helper chuyển đổi object sang snake_case cho Postgres
 const toSnakeCase = (obj: any) => {
+  if (!obj) return obj;
   const n: any = {};
   Object.keys(obj).forEach(k => {
     const newK = k.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
     n[newK] = obj[k];
+  });
+  return n;
+};
+
+const mapFromDB = (row: any) => {
+  if (!row) return row;
+  const n: any = {};
+  Object.keys(row).forEach(k => {
+    const newK = k.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    n[newK] = row[k];
   });
   return n;
 };
@@ -23,30 +32,24 @@ interface AppState {
   isCloudMode: boolean;
   realtimeStatus: 'CONNECTING' | 'CONNECTED' | 'ERROR' | 'OFFLINE';
   
-  // Actions
   fetchInitialData: () => Promise<void>;
   subscribeToChanges: () => () => void;
   
-  // Members
   addMember: (member: Member) => Promise<void>;
   updateMember: (member: Member) => Promise<void>;
   deleteMember: (id: string) => Promise<void>;
   
-  // Events
   addEvent: (event: ScheduleEvent) => Promise<void>;
   updateEvent: (event: ScheduleEvent) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
   
-  // Songs
   addSong: (song: Song) => Promise<void>;
   updateSong: (song: Song) => Promise<void>;
   deleteSong: (id: string) => Promise<void>;
 
-  // Finance
   addTransaction: (tx: Transaction) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   
-  // Attendance
   updateAttendance: (date: string, choirId: string, memberId: string, status: string) => Promise<void>;
 }
 
@@ -90,23 +93,20 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       const groupedAttendance: DailyAttendance[] = [];
       (aRes.data || []).forEach((row: any) => {
-        // Map back from snake_case if needed
-        const choirId = row.choir_id || row.choirId;
-        const memberId = row.member_id || row.memberId;
-        
-        let group = groupedAttendance.find(g => g.date === row.date && g.choirId === choirId);
+        const item = mapFromDB(row);
+        let group = groupedAttendance.find(g => g.date === item.date && g.choirId === item.choirId);
         if (!group) {
-          group = { date: row.date, choirId: choirId, records: [] };
+          group = { date: item.date, choirId: item.choirId, records: [] };
           groupedAttendance.push(group);
         }
-        group.records.push({ memberId: memberId, status: row.status });
+        group.records.push({ memberId: item.memberId, status: item.status });
       });
 
       set({ 
-        members: (mRes.data as Member[]) || [], 
-        events: (eRes.data as ScheduleEvent[]) || [],
-        songs: (sRes.data as Song[]) || [],
-        transactions: (tRes.data as Transaction[]) || [],
+        members: (mRes.data || []).map(mapFromDB), 
+        events: (eRes.data || []).map(mapFromDB),
+        songs: (sRes.data || []).map(mapFromDB),
+        transactions: (tRes.data || []).map(mapFromDB),
         attendanceData: groupedAttendance,
         isLoading: false,
         isCloudMode: true
@@ -121,8 +121,43 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!isSupabaseConfigured) return () => {};
     
     const channel = supabase
-      .channel('schema-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+      .channel('global-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, (payload) => {
+        const data = mapFromDB(payload.new || payload.old);
+        set(state => {
+          if (payload.eventType === 'INSERT') return { members: [...state.members, data] };
+          if (payload.eventType === 'UPDATE') return { members: state.members.map(m => m.id === data.id ? data : m) };
+          if (payload.eventType === 'DELETE') return { members: state.members.filter(m => m.id !== data.id) };
+          return state;
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_events' }, (payload) => {
+        const data = mapFromDB(payload.new || payload.old);
+        set(state => {
+          if (payload.eventType === 'INSERT') return { events: [...state.events, data] };
+          if (payload.eventType === 'UPDATE') return { events: state.events.map(e => e.id === data.id ? data : e) };
+          if (payload.eventType === 'DELETE') return { events: state.events.filter(e => e.id !== data.id) };
+          return state;
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'songs' }, (payload) => {
+        const data = mapFromDB(payload.new || payload.old);
+        set(state => {
+          if (payload.eventType === 'INSERT') return { songs: [...state.songs, data] };
+          if (payload.eventType === 'UPDATE') return { songs: state.songs.map(s => s.id === data.id ? data : s) };
+          if (payload.eventType === 'DELETE') return { songs: state.songs.filter(s => s.id !== data.id) };
+          return state;
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
+        const data = mapFromDB(payload.new || payload.old);
+        set(state => {
+          if (payload.eventType === 'INSERT') return { transactions: [...state.transactions, data] };
+          if (payload.eventType === 'DELETE') return { transactions: state.transactions.filter(t => t.id !== data.id) };
+          return state;
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance' }, () => {
         get().fetchInitialData();
       })
       .subscribe((status) => {
@@ -135,11 +170,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   addMember: async (member) => {
     set(state => ({ members: [...state.members, member] }));
     if (isSupabaseConfigured) {
-      const { error } = await supabase.from('members').insert([toSnakeCase(member)]);
-      if (error) {
-        console.error("RLS/DB Error:", error);
-        alert(`Lỗi Cloud (${error.code}): ${error.message}\n\nHướng dẫn: Bạn cần vào Supabase -> SQL Editor và chạy lệnh 'create policy "Public" on members for all using (true);'`);
-      }
+      await supabase.from('members').insert([toSnakeCase(member)]);
     }
   },
 
@@ -214,15 +245,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateAttendance: async (date, choirId, memberId, status) => {
-    const current = [...get().attendanceData];
-    let day = current.find(d => d.date === date && d.choirId === choirId);
+    const current = JSON.parse(JSON.stringify(get().attendanceData));
+    let day = current.find((d: any) => d.date === date && d.choirId === choirId);
     if (!day) {
       day = { date, choirId, records: [] };
       current.push(day);
     }
-    const idx = day.records.findIndex(r => r.memberId === memberId);
-    if (idx >= 0) day.records[idx].status = status as any;
-    else day.records.push({ memberId, status: status as any });
+    const idx = day.records.findIndex((r: any) => r.memberId === memberId);
+    if (idx >= 0) day.records[idx].status = status;
+    else day.records.push({ memberId, status });
     
     set({ attendanceData: current });
 
@@ -251,7 +282,7 @@ export const useAuthStore = create<any>((set) => ({
 
 export const useNotificationStore = create<any>((set) => ({
   notifications: [
-    { id: '1', title: 'Hệ thống đã sẵn sàng', content: 'Dữ liệu đang được đồng bộ hóa với Cloud Supabase.', isRead: false }
+    { id: '1', title: 'Chào mừng trở lại', content: 'Dữ liệu đang được đồng bộ hóa trực tuyến.', isRead: false }
   ],
   unreadCount: 1,
   markAsRead: (id: string) => set({ unreadCount: 0 })

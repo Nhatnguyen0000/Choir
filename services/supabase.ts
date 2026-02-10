@@ -1,10 +1,10 @@
-
 import { createClient } from '@supabase/supabase-js';
 
-// Truy cập biến môi trường
-const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
-const supabaseAnonKey = (process.env.SUPABASE_ANON_KEY || '').trim();
+// Giá trị được Vite inject qua define trong vite.config (đọc từ .env / .env.local)
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL ?? '').trim();
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').trim();
 
+// Kiểm tra xem biến môi trường đã được điền đúng chưa
 export const isSupabaseConfigured = Boolean(
   supabaseUrl && 
   supabaseAnonKey && 
@@ -14,17 +14,15 @@ export const isSupabaseConfigured = Boolean(
 );
 
 if (!isSupabaseConfigured) {
-  console.group("🔍 Kiểm tra cấu hình Cloud (Supabase)");
-  console.warn("Trạng thái: CHƯA KẾT NỐI");
-  if (!supabaseUrl) console.error("- Thiếu: SUPABASE_URL");
-  if (!supabaseAnonKey) console.error("- Thiếu: SUPABASE_ANON_KEY");
-  console.info("Giải pháp: Thêm các biến này vào file .env hoặc cài đặt Environment Variables trên Vercel.");
+  console.group("☁️ Thông báo hệ thống Cloud");
+  console.warn("Trạng thái: Đang chạy Offline (LocalStorage)");
+  console.info("Lý do: Chưa cấu hình SUPABASE_URL hoặc SUPABASE_ANON_KEY trong file .env");
   console.groupEnd();
 }
 
 // Khởi tạo client an toàn
-// Nếu chưa cấu hình, app vẫn chạy ở chế độ LOCAL (LocalStorage) thông qua logic trong store.ts
+// Nếu chưa có cấu hình, dùng URL giả định để tránh crash app, logic store sẽ tự chuyển sang LocalStorage
 export const supabase = createClient(
-  isSupabaseConfigured ? supabaseUrl : 'https://mformrqcsvbdpbuwiwnm.supabase.co', 
-  isSupabaseConfigured ? supabaseAnonKey : 'sb_publishable_hKxPgdWoagk1Ri4i1aFZmw_dWQOYuTq'
+  isSupabaseConfigured ? supabaseUrl : 'https://placeholder-project.supabase.co', 
+  isSupabaseConfigured ? supabaseAnonKey : 'placeholder-key'
 );

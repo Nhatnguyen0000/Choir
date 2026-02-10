@@ -1,7 +1,6 @@
-
 import { AppView } from '../types';
 import { 
-  Music2, Bell, LayoutDashboard, Users, CalendarDays, Music, Wallet, LogOut, Sparkles, RefreshCw, CheckCircle2, CloudOff, AlertTriangle
+  Music2, Bell, LayoutDashboard, Users, CalendarDays, Music, Wallet, LogOut, Sparkles, RefreshCw, CheckCircle2, CloudOff, AlertTriangle, Megaphone
 } from 'lucide-react';
 import { useNotificationStore, useAuthStore, useAppStore } from '../store';
 import React, { useState, useEffect } from 'react';
@@ -17,7 +16,6 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
   const { user, logout } = useAuthStore();
   const { isCloudMode, realtimeStatus, isLoading } = useAppStore();
   
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
   const navItems = [
@@ -27,6 +25,7 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
     { id: AppView.MEMBERS, label: 'Ca Viên', icon: <Users size={14} /> },
     { id: AppView.FINANCE, label: 'Ngân quỹ', icon: <Wallet size={14} /> },
     { id: AppView.ASSISTANT, label: 'Trợ lý AI', icon: <Sparkles size={14} /> },
+    { id: AppView.UPDATES, label: 'Cập nhật', icon: <Megaphone size={14} /> },
   ];
 
   return (
@@ -52,12 +51,17 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
                 <button
                   key={item.id}
                   onClick={() => setCurrentView(item.id)}
-                  className={`px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all text-[8.5px] font-bold uppercase tracking-widest ${
+                  className={`relative px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all text-[8.5px] font-bold uppercase tracking-widest ${
                     isActive ? 'active-glass shadow-sm' : 'text-slate-400 hover:text-slate-900'
                   }`}
                 >
                   {item.icon}
                   <span>{item.label}</span>
+                  {item.id === AppView.UPDATES && unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] px-1 bg-rose-500 text-white text-[8px] flex items-center justify-center rounded-full border border-white font-bold shadow-sm">
+                      {unreadCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -85,29 +89,12 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
               </span>
             </div>
 
-            <button onClick={() => setShowNotifications(!showNotifications)} className="p-2 glass-button border-none rounded-lg relative text-slate-400 hover:text-slate-900 shadow-sm">
-              <Bell size={16} />
-              {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-amberGold rounded-full border border-white"></span>}
-            </button>
-            <button onClick={() => setShowProfile(!showProfile)} className="w-8 h-8 glass-button border-amberGold/20 rounded-lg flex items-center justify-center text-[10px] font-bold text-slate-900 shadow-sm overflow-hidden">
+            <button onClick={() => setShowProfile(!showProfile)} className="w-8 h-8 glass-button border-amberGold/20 rounded-lg flex items-center justify-center text-[10px] font-bold text-slate-900 shadow-sm overflow-hidden relative">
               {user?.name?.[0]}
+              {unreadCount > 0 && <span className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full border border-white lg:hidden"></span>}
             </button>
           </div>
         </div>
-
-        {showNotifications && (
-          <div className="absolute top-14 right-4 md:right-8 w-72 glass-card rounded-2xl p-4 shadow-2xl border-white/50 z-[110] animate-in fade-in zoom-in-95">
-            <h4 className="text-[9px] font-bold uppercase text-slate-900 mb-3 pb-1.5 border-b border-slate-100 italic tracking-widest">Thông báo hiệp thông</h4>
-            <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-hide">
-              {notifications.map(n => (
-                <div key={n.id} onClick={() => markAsRead(n.id)} className={`p-3 rounded-xl border transition-all cursor-pointer ${n.isRead ? 'bg-white/10 border-transparent' : 'bg-amber-50/40 border-amber-100'}`}>
-                  <p className="text-[10px] font-bold text-slate-800 leading-tight">{n.title}</p>
-                  <p className="text-[8px] text-slate-500 mt-1 italic leading-relaxed">{n.content}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {showProfile && (
           <div className="absolute top-14 right-4 md:right-8 w-48 glass-card rounded-2xl shadow-2xl overflow-hidden border-white/50 z-[110] animate-in fade-in zoom-in-95">
@@ -137,9 +124,14 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
         {navItems.map((item) => {
           const isActive = currentView === item.id;
           return (
-            <button key={item.id} onClick={() => setCurrentView(item.id)} className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-xl transition-all ${isActive ? 'active-glass shadow-sm' : 'text-slate-400'}`}>
+            <button key={item.id} onClick={() => setCurrentView(item.id)} className={`relative flex-1 flex flex-col items-center justify-center py-2.5 rounded-xl transition-all ${isActive ? 'active-glass shadow-sm' : 'text-slate-400'}`}>
               {React.cloneElement(item.icon as React.ReactElement<any>, { size: 18 })}
               <span className="text-[7px] mt-1 font-bold uppercase tracking-tighter">{item.label}</span>
+              {item.id === AppView.UPDATES && unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] px-1 bg-rose-500 text-white text-[8px] flex items-center justify-center rounded-full border border-white font-bold shadow-sm">
+                  {unreadCount}
+                </span>
+              )}
             </button>
           );
         })}

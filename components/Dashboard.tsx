@@ -2,8 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { 
   Users, Heart, Wallet, Library, 
   Calendar, Clock, MapPin, ChevronRight, 
-  Sparkles, Church, Quote, Cloud, ShieldAlert,
-  Settings, Copy, CheckCircle2, Terminal, X,
+  Sparkles, Church, Quote, Cloud,
+  Settings, Copy, CheckCircle2, X,
   RefreshCw
 } from 'lucide-react';
 import { useMemberStore, useEventStore, useFinanceStore, useLibraryStore, useAppStore } from '../store';
@@ -37,17 +37,50 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     return events.filter(e => e.date >= today).sort((a,b) => a.date.localeCompare(b.date)).slice(0, 3);
   }, [events]);
 
-  const sqlCode = `-- COPY VÀ DÁN LỆNH NÀY VÀO SQL EDITOR CỦA SUPABASE
-BEGIN;
-  ALTER TABLE members DISABLE ROW LEVEL SECURITY;
-  ALTER TABLE schedule_events DISABLE ROW LEVEL SECURITY;
-  ALTER TABLE songs DISABLE ROW LEVEL SECURITY;
-  ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
-  ALTER TABLE attendance DISABLE ROW LEVEL SECURITY;
-COMMIT;`;
+  const fullSqlCode = `-- COPY VÀ CHẠY TRONG SUPABASE SQL EDITOR
+-- 1. Tạo các bảng dữ liệu
+CREATE TABLE IF NOT EXISTS members (id TEXT PRIMARY KEY, choir_id TEXT, saint_name TEXT, name TEXT NOT NULL, phone TEXT, gender TEXT, role TEXT, grade TEXT, birth_year TEXT, avatar TEXT, join_date DATE, status TEXT);
+CREATE TABLE IF NOT EXISTS schedule_events (id TEXT PRIMARY KEY, choir_id TEXT, date DATE NOT NULL, time TIME, mass_name TEXT, type TEXT, liturgical_color TEXT, location TEXT, notes TEXT);
+CREATE TABLE IF NOT EXISTS songs (id TEXT PRIMARY KEY, choir_id TEXT, title TEXT NOT NULL, composer TEXT, category TEXT, liturgical_seasons JSONB, is_familiar BOOLEAN DEFAULT FALSE, experience_notes TEXT);
+CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, choir_id TEXT, date DATE NOT NULL, description TEXT, amount NUMERIC, type TEXT, category TEXT);
+CREATE TABLE IF NOT EXISTS attendance (id BIGSERIAL PRIMARY KEY, date DATE NOT NULL, choir_id TEXT, member_id TEXT REFERENCES members(id) ON DELETE CASCADE, status TEXT, UNIQUE(date, member_id));
+
+-- 2. Replica Identity Full (QUAN TRỌNG ĐỂ ĐỒNG BỘ)
+ALTER TABLE members REPLICA IDENTITY FULL;
+ALTER TABLE schedule_events REPLICA IDENTITY FULL;
+ALTER TABLE songs REPLICA IDENTITY FULL;
+ALTER TABLE transactions REPLICA IDENTITY FULL;
+ALTER TABLE attendance REPLICA IDENTITY FULL;
+
+-- 3. Tắt bảo mật RLS để app kết nối trực tiếp
+ALTER TABLE members DISABLE ROW LEVEL SECURITY;
+ALTER TABLE schedule_events DISABLE ROW LEVEL SECURITY;
+ALTER TABLE songs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance DISABLE ROW LEVEL SECURITY;
+
+-- 4. Publication cho Realtime (Idempotent script)
+DO $$ 
+DECLARE
+  tables_to_add text[] := ARRAY['members', 'schedule_events', 'songs', 'transactions', 'attendance'];
+  t text;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    CREATE PUBLICATION supabase_realtime;
+  END IF;
+
+  FOR t IN SELECT unnest(tables_to_add) LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables 
+      WHERE pubname = 'supabase_realtime' AND tablename = t
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE %I', t);
+    END IF;
+  END LOOP;
+END $$;`;
 
   const copySQL = () => {
-    navigator.clipboard.writeText(sqlCode);
+    navigator.clipboard.writeText(fullSqlCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -100,26 +133,22 @@ COMMIT;`;
                 </h4>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
                    <p className="text-[10px] text-slate-500 leading-relaxed italic">
-                     Mở file <code className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-800 font-bold">.env</code> trong thư mục gốc và dán các mã từ <strong>Supabase Project Settings {"->"} API</strong>:
+                     Mở file <code className="bg-slate-200 px-1.5 py-0.5 rounded text-slate-800 font-bold">.env</code> và dán <strong>URL</strong> {"&"} <strong>Key</strong> từ mục Settings trong Supabase.
                    </p>
-                   <ul className="text-[10px] space-y-1 font-mono bg-slate-900 text-slate-300 p-3 rounded-xl overflow-x-auto">
-                     <li>SUPABASE_URL=https://...</li>
-                     <li>SUPABASE_ANON_KEY=eyJhb...</li>
-                   </ul>
                 </div>
               </section>
 
               <section className="space-y-3">
                 <h4 className="text-[11px] font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
                   <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-[10px]">2</div>
-                  Bước 2: Khắc phục lỗi RLS (Không lưu được)
+                  Bước 2: Khởi tạo Database
                 </h4>
                 <p className="text-[10px] text-slate-500 italic leading-relaxed">
-                  Supabase mặc định khóa quyền ghi. Hãy copy lệnh SQL dưới đây, dán vào <strong>SQL Editor</strong> trên Supabase Dashboard và nhấn <strong>RUN</strong>:
+                  Sao chép mã SQL dưới đây, dán vào <strong>SQL Editor</strong> trên Supabase và nhấn <strong>RUN</strong>:
                 </p>
                 <div className="relative group">
-                  <pre className="p-5 bg-slate-900 text-emerald-400 rounded-2xl text-[10px] font-mono overflow-x-auto border border-white/10 shadow-xl">
-                    {sqlCode}
+                  <pre className="p-5 bg-slate-900 text-emerald-400 rounded-2xl text-[10px] font-mono overflow-x-auto border border-white/10 shadow-xl max-h-48 overflow-y-auto">
+                    {fullSqlCode}
                   </pre>
                   <button 
                     onClick={copySQL}
@@ -136,7 +165,7 @@ COMMIT;`;
                    onClick={() => window.location.reload()} 
                    className="px-10 py-4 bg-slate-900 text-white rounded-[1.5rem] text-[11px] font-bold uppercase tracking-[0.2em] shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
                  >
-                   <RefreshCw size={18} /> Tải lại để kết nối Cloud
+                   <RefreshCw size={18} /> Tải lại để kết nối
                  </button>
               </div>
             </div>

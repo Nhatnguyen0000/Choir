@@ -1,11 +1,11 @@
-
 export enum AppView {
   DASHBOARD = 'DASHBOARD',
   SCHEDULE = 'SCHEDULE',
   MEMBERS = 'MEMBERS',
   FINANCE = 'FINANCE',
   LIBRARY = 'LIBRARY',
-  ASSISTANT = 'ASSISTANT'
+  ASSISTANT = 'ASSISTANT',
+  UPDATES = 'UPDATES'
 }
 
 export type LiturgicalColor = 'GREEN' | 'RED' | 'WHITE' | 'VIOLET' | 'GOLD' | 'ROSE';
@@ -90,6 +90,6 @@ export interface Notification {
   id: string;
   title: string;
   content: string;
-  time: string;
+  time?: string;
   isRead: boolean;
 }
