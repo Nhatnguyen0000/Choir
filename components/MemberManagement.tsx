@@ -23,6 +23,7 @@ const MemberManagement: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: string | null; name: string }>({ open: false, id: null, name: '' });
 
@@ -62,19 +63,24 @@ const MemberManagement: React.FC = () => {
     XLSX.writeFile(wb, `SoBo_CaVien_ThienThan_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name) return;
-    if (editingMember) {
-      updateMember({ ...editingMember, ...form } as Member);
-      addToast('Đã cập nhật ca viên');
-    } else {
-      addMember({ ...form as Member, id: crypto.randomUUID(), choirId: 'c-thienthan', status: (form.status as Member['status']) || 'ACTIVE' });
-      addToast('Đã thêm ca viên mới');
+    if (!form.name || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      if (editingMember) {
+        updateMember({ ...editingMember, ...form } as Member);
+        addToast('Đã cập nhật ca viên');
+      } else {
+        addMember({ ...form as Member, id: crypto.randomUUID(), choirId: 'c-thienthan', status: (form.status as Member['status']) || 'ACTIVE' });
+        addToast('Đã thêm ca viên mới');
+      }
+      setIsModalOpen(false);
+      setEditingMember(null);
+      setForm(initialForm);
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsModalOpen(false);
-    setEditingMember(null);
-    setForm(initialForm);
   };
 
   const handleConfirmDelete = () => {
@@ -405,9 +411,10 @@ const MemberManagement: React.FC = () => {
                   </button>
                   <button 
                     type="submit" 
-                    className="flex-[2] py-4.5 bg-slate-900 text-white rounded-2xl font-bold text-[11px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl"
+                    disabled={isSubmitting}
+                    className="flex-[2] py-4.5 bg-slate-900 text-white rounded-2xl font-bold text-[11px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 active:scale-95 transition-all shadow-xl disabled:opacity-60 disabled:pointer-events-none"
                   >
-                    <Save size={18} /> LƯU CA VIÊN
+                    {isSubmitting ? 'Đang lưu...' : <><Save size={18} /> LƯU CA VIÊN</>}
                   </button>
                 </div>
              </form>

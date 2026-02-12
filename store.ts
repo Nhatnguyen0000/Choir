@@ -55,6 +55,14 @@ interface AppState {
 
 const LOCAL_STORAGE_KEY = 'thien_than_app_data_v2';
 
+// Id các bản ghi vừa insert từ client này — Realtime INSERT sẽ bỏ qua để tránh thêm trùng
+const pendingInsertIds = {
+  members: new Set<string>(),
+  events: new Set<string>(),
+  songs: new Set<string>(),
+  transactions: new Set<string>(),
+};
+
 export const useAppStore = create<AppState>((set, get) => ({
   members: [],
   events: [],
@@ -132,8 +140,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       .channel('global-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'members' }, (payload) => {
         const data = mapFromDB(payload.new || payload.old);
+        const id = data?.id != null ? String(data.id) : '';
+        if (!id) return;
+        if (payload.eventType === 'INSERT' && pendingInsertIds.members.has(id)) {
+          pendingInsertIds.members.delete(id);
+          return;
+        }
         set(state => {
-          if (payload.eventType === 'INSERT') return { members: [...state.members, data] };
+          if (payload.eventType === 'INSERT') return { members: [...state.members.filter(m => String(m.id) !== id), data] };
           if (payload.eventType === 'UPDATE') return { members: state.members.map(m => m.id === data.id ? data : m) };
           if (payload.eventType === 'DELETE') return { members: state.members.filter(m => m.id !== data.id) };
           return state;
@@ -141,8 +155,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_events' }, (payload) => {
         const data = mapFromDB(payload.new || payload.old);
+        const id = data?.id != null ? String(data.id) : '';
+        if (!id) return;
+        if (payload.eventType === 'INSERT' && pendingInsertIds.events.has(id)) {
+          pendingInsertIds.events.delete(id);
+          return;
+        }
         set(state => {
-          if (payload.eventType === 'INSERT') return { events: [...state.events, data] };
+          if (payload.eventType === 'INSERT') return { events: [...state.events.filter(e => String(e.id) !== id), data] };
           if (payload.eventType === 'UPDATE') return { events: state.events.map(e => e.id === data.id ? data : e) };
           if (payload.eventType === 'DELETE') return { events: state.events.filter(e => e.id !== data.id) };
           return state;
@@ -150,8 +170,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'songs' }, (payload) => {
         const data = mapFromDB(payload.new || payload.old);
+        const id = data?.id != null ? String(data.id) : '';
+        if (!id) return;
+        if (payload.eventType === 'INSERT' && pendingInsertIds.songs.has(id)) {
+          pendingInsertIds.songs.delete(id);
+          return;
+        }
         set(state => {
-          if (payload.eventType === 'INSERT') return { songs: [...state.songs, data] };
+          if (payload.eventType === 'INSERT') return { songs: [...state.songs.filter(s => String(s.id) !== id), data] };
           if (payload.eventType === 'UPDATE') return { songs: state.songs.map(s => s.id === data.id ? data : s) };
           if (payload.eventType === 'DELETE') return { songs: state.songs.filter(s => s.id !== data.id) };
           return state;
@@ -159,8 +185,14 @@ export const useAppStore = create<AppState>((set, get) => ({
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
         const data = mapFromDB(payload.new || payload.old);
+        const id = data?.id != null ? String(data.id) : '';
+        if (!id) return;
+        if (payload.eventType === 'INSERT' && pendingInsertIds.transactions.has(id)) {
+          pendingInsertIds.transactions.delete(id);
+          return;
+        }
         set(state => {
-          if (payload.eventType === 'INSERT') return { transactions: [...state.transactions, data] };
+          if (payload.eventType === 'INSERT') return { transactions: [...state.transactions.filter(t => String(t.id) !== id), data] };
           if (payload.eventType === 'DELETE') return { transactions: state.transactions.filter(t => t.id !== data.id) };
           return state;
         });
@@ -176,10 +208,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addMember: async (member) => {
+    const id = String(member.id);
+    pendingInsertIds.members.add(id);
     set(state => ({ members: [...state.members, member] }));
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('members').insert([toSnakeCase(member)]);
       if (error) {
+        pendingInsertIds.members.delete(id);
         console.error('Supabase addMember:', error.message);
         set(state => ({ members: state.members.filter(m => m.id !== member.id) }));
       }
@@ -211,10 +246,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addEvent: async (event) => {
+    const id = String(event.id);
+    pendingInsertIds.events.add(id);
     set(state => ({ events: [...state.events, event] }));
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('schedule_events').insert([toSnakeCase(event)]);
       if (error) {
+        pendingInsertIds.events.delete(id);
         console.error('Supabase addEvent:', error.message);
         set(state => ({ events: state.events.filter(e => e.id !== event.id) }));
       }
@@ -246,10 +284,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addSong: async (song) => {
+    const id = String(song.id);
+    pendingInsertIds.songs.add(id);
     set(state => ({ songs: [...state.songs, song] }));
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('songs').insert([toSnakeCase(song)]);
       if (error) {
+        pendingInsertIds.songs.delete(id);
         console.error('Supabase addSong:', error.message);
         set(state => ({ songs: state.songs.filter(s => s.id !== song.id) }));
       }
@@ -281,10 +322,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   addTransaction: async (tx) => {
+    const id = String(tx.id);
+    pendingInsertIds.transactions.add(id);
     set(state => ({ transactions: [...state.transactions, tx] }));
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('transactions').insert([toSnakeCase(tx)]);
       if (error) {
+        pendingInsertIds.transactions.delete(id);
         console.error('Supabase addTransaction:', error.message);
         set(state => ({ transactions: state.transactions.filter(t => t.id !== tx.id) }));
       }
