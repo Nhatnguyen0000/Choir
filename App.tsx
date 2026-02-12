@@ -7,8 +7,8 @@ import FinanceManagement from './components/FinanceManagement';
 import LibraryManagement from './components/LibraryManagement';
 import ScheduleManagement from './components/ScheduleManagement';
 import AIAssistant from './components/AIAssistant';
-import Updates from './components/Updates';
 import Login from './components/Login';
+import Toast from './components/Toast';
 import { useAuthStore, useAppStore } from './store';
 
 const App: React.FC = () => {
@@ -38,17 +38,19 @@ const App: React.FC = () => {
       case AppView.FINANCE: return <FinanceManagement />;
       case AppView.LIBRARY: return <LibraryManagement />;
       case AppView.ASSISTANT: return <AIAssistant />;
-      case AppView.UPDATES: return <Updates />;
       default: return <Dashboard onNavigate={setCurrentView} />;
     }
   };
 
   return (
-    <Layout currentView={currentView} setCurrentView={setCurrentView}>
-      <div className="animate-fade-in h-full">
-        {renderContent()}
-      </div>
-    </Layout>
+    <>
+      <Toast />
+      <Layout currentView={currentView} setCurrentView={setCurrentView}>
+        <div className="animate-fade-in h-full">
+          {renderContent()}
+        </div>
+      </Layout>
+    </>
   );
 };
 

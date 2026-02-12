@@ -1,14 +1,17 @@
 
 import React, { useState, useMemo } from 'react';
 import { Search, Plus, Music, X, Edit2, Trash2, Heart, Info, ChevronRight, ChevronDown } from 'lucide-react';
-import { useLibraryStore } from '../store';
+import { useLibraryStore, useToastStore } from '../store';
 import { Song } from '../types';
+import ConfirmDialog from './ConfirmDialog';
 
 const LibraryManagement: React.FC = () => {
   const { songs, addSong, updateSong, deleteSong } = useLibraryStore();
+  const addToast = useToastStore((s) => s.addToast);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSong, setEditingSong] = useState<Song | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: string | null; title: string }>({ open: false, id: null, title: '' });
 
   const [form, setForm] = useState<Partial<Song>>({
     title: '', composer: '', category: 'Nhập lễ', liturgicalSeasons: [], isFamiliar: false, experienceNotes: ''
@@ -24,12 +27,22 @@ const LibraryManagement: React.FC = () => {
     if (!form.title) return;
     if (editingSong) {
       updateSong({ ...editingSong, ...form } as Song);
+      addToast('Đã cập nhật bài hát');
     } else {
-      addSong({ ...form as Song, id: `s-${Date.now()}` });
+      addSong({ ...form as Song, id: crypto.randomUUID() });
+      addToast('Đã thêm bài hát vào thư viện');
     }
     setIsModalOpen(false);
     setEditingSong(null);
     setForm({ title: '', composer: '', category: 'Nhập lễ', liturgicalSeasons: [], isFamiliar: false, experienceNotes: '' });
+  };
+
+  const handleConfirmDeleteSong = () => {
+    if (confirmDelete.id) {
+      deleteSong(confirmDelete.id);
+      addToast('Đã xóa bài hát khỏi thư viện');
+    }
+    setConfirmDelete({ open: false, id: null, title: '' });
   };
 
   const liturgicalSeasonsList = ['Mùa Vọng', 'Giáng Sinh', 'Mùa Chay', 'Phục Sinh', 'Thường Niên', 'Kính Đức Mẹ', 'Lễ Các Thánh'];
@@ -38,9 +51,9 @@ const LibraryManagement: React.FC = () => {
     <div className="w-full space-y-8 animate-fade-in pb-16 px-2">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
         <div className="space-y-5 flex-1">
-           <div className="space-y-1.5">
+           <div className="space-y-2">
              <h2 className="sacred-title text-3xl font-bold text-slate-900 italic tracking-tight uppercase">Thư Viện Âm Ca</h2>
-             <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] italic leading-none">Kho tàng thánh nhạc cộng đoàn</p>
+             <p className="text-slate-400 text-[12px] font-bold uppercase tracking-[0.3em] italic leading-none">Kho tàng thánh nhạc cộng đoàn</p>
            </div>
            
            <div className="flex gap-2.5 w-full overflow-x-auto scrollbar-hide pb-2">
@@ -71,24 +84,24 @@ const LibraryManagement: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 px-2 pb-10">
         {filtered.map(s => (
-          <div key={s.id} className="glass-card p-8 rounded-[2.5rem] border-white/60 hover:shadow-2xl transition-all group flex flex-col h-full bg-white/40 shadow-sm relative overflow-hidden">
+          <div key={s.id} className="glass-card card p-8 rounded-2xl border-slate-100/80 hover:shadow-xl transition-all group flex flex-col h-full relative overflow-hidden">
              <div className="flex items-start justify-between mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-white shadow-sm border border-slate-50 text-amberGold flex items-center justify-center">
-                   <Music size={24} />
+                <div className="w-14 h-14 rounded-2xl bg-white shadow-md border border-slate-100 text-amberGold flex items-center justify-center">
+                   <Music size={26} />
                 </div>
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
                    <button onClick={() => { setEditingSong(s); setForm(s); setIsModalOpen(true); }} className="p-2.5 glass-button border-none rounded-xl text-slate-300 hover:text-amberGold bg-white/60 shadow-sm"><Edit2 size={16}/></button>
-                   <button onClick={() => { if(window.confirm('Anh/chị xác nhận xóa bài hát khỏi thư viện âm ca?')) deleteSong(s.id); }} className="p-2.5 glass-button border-none rounded-xl text-slate-300 hover:text-rose-500 bg-white/60 shadow-sm"><Trash2 size={16}/></button>
+                   <button onClick={() => setConfirmDelete({ open: true, id: s.id, title: s.title })} className="p-2.5 glass-button border-none rounded-xl text-slate-300 hover:text-rose-500 bg-white/60 shadow-sm"><Trash2 size={16}/></button>
                 </div>
              </div>
 
              <div className="flex-1 space-y-4">
                 <div className="min-w-0">
-                   <h4 className="sacred-title text-[18px] font-bold text-slate-900 leading-tight italic group-hover:text-amberGold transition-colors tracking-tight">
+                   <h4 className="sacred-title text-[19px] font-bold text-slate-900 leading-tight italic group-hover:text-amberGold transition-colors tracking-tight">
                       {s.title}
-                      {s.isFamiliar && <Heart size={12} fill="#FBBF24" className="text-amberGold inline-block ml-2 mb-0.5" />}
+                      {s.isFamiliar && <Heart size={14} fill="#FBBF24" className="text-amberGold inline-block ml-2 mb-0.5" />}
                    </h4>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-2 italic flex items-center gap-2.5">
+                   <p className="text-[12px] font-bold text-slate-400 uppercase tracking-[0.3em] mt-2 italic flex items-center gap-2.5">
                      <span className="w-4 h-px bg-slate-200 rounded-full"></span> {s.composer || 'Khuyết danh'}
                    </p>
                 </div>
@@ -157,6 +170,16 @@ const LibraryManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDelete.open}
+        title="Xóa bài hát"
+        message={`Bạn có chắc muốn xóa "${confirmDelete.title}" khỏi thư viện âm ca? Hành động này không thể hoàn tác.`}
+        confirmLabel="Xóa"
+        onConfirm={handleConfirmDeleteSong}
+        onCancel={() => setConfirmDelete({ open: false, id: null, title: '' })}
+        danger
+      />
     </div>
   );
 };

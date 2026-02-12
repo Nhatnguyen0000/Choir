@@ -1,13 +1,16 @@
 
 import React, { useState, useMemo } from 'react';
 import { Search, TrendingUp, TrendingDown, X, Trash2, Wallet, ArrowUpRight, ArrowDownLeft, FileDown, Camera, Plus, History, ChevronDown, Save } from 'lucide-react';
-import { useFinanceStore } from '../store';
+import { useFinanceStore, useToastStore } from '../store';
 import { Transaction } from '../types';
+import ConfirmDialog from './ConfirmDialog';
 
 const FinanceManagement: React.FC = () => {
   const { transactions, addTransaction, deleteTransaction } = useFinanceStore();
+  const addToast = useToastStore((s) => s.addToast);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: string | null; description: string }>({ open: false, id: null, description: '' });
   const [newTx, setNewTx] = useState<Partial<Transaction>>({ 
     description: '', 
     amount: 0, 
@@ -30,18 +33,27 @@ const FinanceManagement: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTx.description || !newTx.amount) return;
-    addTransaction({ ...newTx as Transaction, id: `tx-${Date.now()}` });
+    addTransaction({ ...newTx as Transaction, id: crypto.randomUUID() });
+    addToast('Đã thêm phiếu giao dịch');
     setIsModalOpen(false);
     setNewTx({ description: '', amount: 0, type: 'IN', category: 'Đóng góp', date: new Date().toISOString().split('T')[0] });
+  };
+
+  const handleConfirmDeleteTx = () => {
+    if (confirmDelete.id) {
+      deleteTransaction(confirmDelete.id);
+      addToast('Đã xóa phiếu giao dịch');
+    }
+    setConfirmDelete({ open: false, id: null, description: '' });
   };
 
   return (
     <div className="w-full space-y-6 animate-fade-in pb-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 glass-card p-6 rounded-[2rem] border-white/80 bg-white/40 shadow-sm">
-        <div className="space-y-1">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 glass-card card p-6 rounded-2xl">
+        <div className="space-y-1.5">
           <h1 className="sacred-title text-2xl font-bold text-slate-900 leading-none italic">Đoàn Quỹ Minh Bạch</h1>
-          <p className="text-slate-400 text-[9px] font-bold uppercase tracking-[0.3em] mt-1 leading-none italic">Hiệp thông tài chánh cộng đoàn</p>
+          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-[0.3em] mt-1 leading-none italic">Hiệp thông tài chánh cộng đoàn</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <button className="flex-1 sm:flex-none glass-button px-5 py-2.5 rounded-xl text-[9px] font-bold uppercase tracking-widest text-slate-600 hover:text-royalBlue flex items-center justify-center gap-2">
@@ -56,14 +68,14 @@ const FinanceManagement: React.FC = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {[
-          { label: 'Số dư hiện có', value: stats.balance, color: 'text-slate-900', icon: <Wallet size={16}/>, bg: 'bg-white/40' },
-          { label: 'Tổng ngân thu', value: stats.income, color: 'text-emeraldGreen', icon: <TrendingUp size={16}/>, bg: 'bg-emerald-50/40' },
-          { label: 'Tổng ngân chi', value: stats.expense, color: 'text-rose-500', icon: <TrendingDown size={16}/>, bg: 'bg-rose-50/40' },
+          { label: 'Số dư hiện có', value: stats.balance, color: 'text-slate-900', icon: <Wallet size={18}/>, bg: 'bg-white/50' },
+          { label: 'Tổng ngân thu', value: stats.income, color: 'text-emeraldGreen', icon: <TrendingUp size={18}/>, bg: 'bg-emerald-50/50' },
+          { label: 'Tổng ngân chi', value: stats.expense, color: 'text-rose-500', icon: <TrendingDown size={18}/>, bg: 'bg-rose-50/50' },
         ].map((m, idx) => (
-          <div key={idx} className={`glass-card p-6 rounded-2xl flex flex-col items-center text-center gap-4 border-white/60 shadow-sm ${m.bg}`}>
-             <div className={`p-2.5 rounded-xl bg-white shadow-sm border border-white ${m.color === 'text-slate-900' ? 'text-slate-400' : m.color}`}>{m.icon}</div>
+          <div key={idx} className={`glass-card card p-6 rounded-2xl flex flex-col items-center text-center gap-4 ${m.bg}`}>
+             <div className={`p-3 rounded-xl bg-white shadow-sm border border-slate-100 ${m.color === 'text-slate-900' ? 'text-slate-400' : m.color}`}>{m.icon}</div>
              <div>
-                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none italic mb-1">{m.label}</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none italic mb-1.5">{m.label}</p>
                 <h3 className={`text-lg font-bold tracking-tight ${m.color}`}>{m.value.toLocaleString()}đ</h3>
              </div>
           </div>
@@ -71,10 +83,10 @@ const FinanceManagement: React.FC = () => {
       </div>
 
       {/* Transactions Table */}
-      <div className="glass-card rounded-[2rem] overflow-hidden bg-white/40 border-white shadow-sm">
-        <div className="px-6 py-4 border-b border-white/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h3 className="text-[10px] font-bold text-slate-900 uppercase tracking-[0.2em] flex items-center gap-3 italic">
-              <History size={14} className="text-amberGold" /> Nhật ký hiệp thông tài chính
+      <div className="glass-card card rounded-2xl overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h3 className="text-[12px] font-bold text-slate-900 uppercase tracking-[0.2em] flex items-center gap-3 italic">
+              <History size={16} className="text-amberGold" /> Nhật ký hiệp thông tài chính
             </h3>
             <div className="relative w-full md:w-64">
                <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
@@ -90,7 +102,7 @@ const FinanceManagement: React.FC = () => {
         <div className="overflow-x-auto scrollbar-hide">
           <table className="w-full text-left min-w-[700px]">
             <thead>
-              <tr className="bg-slate-50/60 text-slate-400 text-[8px] font-bold uppercase tracking-widest border-b border-slate-100 italic">
+              <tr className="bg-slate-50/80 text-slate-500 text-[10px] font-bold uppercase tracking-widest border-b border-slate-100 italic">
                 <th className="px-8 py-4 w-16 text-center">STT</th>
                 <th className="px-4 py-4">Nội Dung</th>
                 <th className="px-4 py-4 text-center">Hạng Mục</th>
@@ -108,8 +120,8 @@ const FinanceManagement: React.FC = () => {
                         {t.type === 'IN' ? <ArrowUpRight size={14} /> : <ArrowDownLeft size={14} />}
                       </div>
                       <div className="flex flex-col">
-                         <span className="text-[13px] font-bold text-slate-900 leading-tight">{t.description}</span>
-                         <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest italic mt-0.5">{t.date}</span>
+                         <span className="text-[14px] font-bold text-slate-900 leading-tight">{t.description}</span>
+                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic mt-0.5">{t.date}</span>
                       </div>
                     </div>
                   </td>
@@ -120,7 +132,7 @@ const FinanceManagement: React.FC = () => {
                     {t.type === 'IN' ? '+' : '-'}{t.amount.toLocaleString()}đ
                   </td>
                   <td className="px-8 py-4 text-right">
-                    <button onClick={() => { if(window.confirm('Anh/chị xác nhận xóa phiếu?')) deleteTransaction(t.id); }} className="p-2 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500 transition-all"><Trash2 size={14} /></button>
+                    <button onClick={() => setConfirmDelete({ open: true, id: t.id, description: t.description })} className="p-2 opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500 transition-all"><Trash2 size={14} /></button>
                   </td>
                 </tr>
               ))}
@@ -171,6 +183,16 @@ const FinanceManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDelete.open}
+        title="Xóa phiếu giao dịch"
+        message={`Bạn có chắc muốn xóa phiếu "${confirmDelete.description}" khỏi sổ quỹ? Hành động này không thể hoàn tác.`}
+        confirmLabel="Xóa"
+        onConfirm={handleConfirmDeleteTx}
+        onCancel={() => setConfirmDelete({ open: false, id: null, description: '' })}
+        danger
+      />
     </div>
   );
 };

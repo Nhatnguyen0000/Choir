@@ -91,6 +91,14 @@ export const useAppStore = create<AppState>((set, get) => ({
         supabase.from('attendance').select('*')
       ]);
 
+      const hasError = mRes.error || eRes.error || sRes.error || tRes.error || aRes.error;
+      if (hasError) {
+        [mRes.error, eRes.error, sRes.error, tRes.error, aRes.error].forEach((err, i) => {
+          if (err) console.error(`Supabase fetch error [${['members','schedule_events','songs','transactions','attendance'][i]}]:`, err.message);
+        });
+        set({ realtimeStatus: 'ERROR' });
+      }
+
       const groupedAttendance: DailyAttendance[] = [];
       (aRes.data || []).forEach((row: any) => {
         const item = mapFromDB(row);
@@ -170,77 +178,128 @@ export const useAppStore = create<AppState>((set, get) => ({
   addMember: async (member) => {
     set(state => ({ members: [...state.members, member] }));
     if (isSupabaseConfigured) {
-      await supabase.from('members').insert([toSnakeCase(member)]);
+      const { error } = await supabase.from('members').insert([toSnakeCase(member)]);
+      if (error) {
+        console.error('Supabase addMember:', error.message);
+        set(state => ({ members: state.members.filter(m => m.id !== member.id) }));
+      }
     }
   },
 
   updateMember: async (member) => {
+    const prev = get().members.find(m => m.id === member.id);
     set(state => ({ members: state.members.map(m => m.id === member.id ? member : m) }));
     if (isSupabaseConfigured) {
-      await supabase.from('members').update(toSnakeCase(member)).eq('id', member.id);
+      const { error } = await supabase.from('members').update(toSnakeCase(member)).eq('id', member.id);
+      if (error) {
+        console.error('Supabase updateMember:', error.message);
+        if (prev) set(state => ({ members: state.members.map(m => m.id === member.id ? prev : m) }));
+      }
     }
   },
 
   deleteMember: async (id) => {
+    const prev = get().members;
     set(state => ({ members: state.members.filter(m => m.id !== id) }));
     if (isSupabaseConfigured) {
-      await supabase.from('members').delete().eq('id', id);
+      const { error } = await supabase.from('members').delete().eq('id', id);
+      if (error) {
+        console.error('Supabase deleteMember:', error.message);
+        set({ members: prev });
+      }
     }
   },
 
   addEvent: async (event) => {
     set(state => ({ events: [...state.events, event] }));
     if (isSupabaseConfigured) {
-      await supabase.from('schedule_events').insert([toSnakeCase(event)]);
+      const { error } = await supabase.from('schedule_events').insert([toSnakeCase(event)]);
+      if (error) {
+        console.error('Supabase addEvent:', error.message);
+        set(state => ({ events: state.events.filter(e => e.id !== event.id) }));
+      }
     }
   },
 
   updateEvent: async (event) => {
+    const prev = get().events.find(e => e.id === event.id);
     set(state => ({ events: state.events.map(e => e.id === event.id ? event : e) }));
     if (isSupabaseConfigured) {
-      await supabase.from('schedule_events').update(toSnakeCase(event)).eq('id', event.id);
+      const { error } = await supabase.from('schedule_events').update(toSnakeCase(event)).eq('id', event.id);
+      if (error) {
+        console.error('Supabase updateEvent:', error.message);
+        if (prev) set(state => ({ events: state.events.map(e => e.id === event.id ? prev : e) }));
+      }
     }
   },
 
   deleteEvent: async (id) => {
+    const prev = get().events;
     set(state => ({ events: state.events.filter(e => e.id !== id) }));
     if (isSupabaseConfigured) {
-      await supabase.from('schedule_events').delete().eq('id', id);
+      const { error } = await supabase.from('schedule_events').delete().eq('id', id);
+      if (error) {
+        console.error('Supabase deleteEvent:', error.message);
+        set({ events: prev });
+      }
     }
   },
 
   addSong: async (song) => {
     set(state => ({ songs: [...state.songs, song] }));
     if (isSupabaseConfigured) {
-      await supabase.from('songs').insert([toSnakeCase(song)]);
+      const { error } = await supabase.from('songs').insert([toSnakeCase(song)]);
+      if (error) {
+        console.error('Supabase addSong:', error.message);
+        set(state => ({ songs: state.songs.filter(s => s.id !== song.id) }));
+      }
     }
   },
 
   updateSong: async (song) => {
+    const prev = get().songs.find(s => s.id === song.id);
     set(state => ({ songs: state.songs.map(s => s.id === song.id ? song : s) }));
     if (isSupabaseConfigured) {
-      await supabase.from('songs').update(toSnakeCase(song)).eq('id', song.id);
+      const { error } = await supabase.from('songs').update(toSnakeCase(song)).eq('id', song.id);
+      if (error) {
+        console.error('Supabase updateSong:', error.message);
+        if (prev) set(state => ({ songs: state.songs.map(s => s.id === song.id ? prev : s) }));
+      }
     }
   },
 
   deleteSong: async (id) => {
+    const prev = get().songs;
     set(state => ({ songs: state.songs.filter(s => s.id !== id) }));
     if (isSupabaseConfigured) {
-      await supabase.from('songs').delete().eq('id', id);
+      const { error } = await supabase.from('songs').delete().eq('id', id);
+      if (error) {
+        console.error('Supabase deleteSong:', error.message);
+        set({ songs: prev });
+      }
     }
   },
 
   addTransaction: async (tx) => {
     set(state => ({ transactions: [...state.transactions, tx] }));
     if (isSupabaseConfigured) {
-      await supabase.from('transactions').insert([toSnakeCase(tx)]);
+      const { error } = await supabase.from('transactions').insert([toSnakeCase(tx)]);
+      if (error) {
+        console.error('Supabase addTransaction:', error.message);
+        set(state => ({ transactions: state.transactions.filter(t => t.id !== tx.id) }));
+      }
     }
   },
 
   deleteTransaction: async (id) => {
+    const prev = get().transactions;
     set(state => ({ transactions: state.transactions.filter(t => t.id !== id) }));
     if (isSupabaseConfigured) {
-      await supabase.from('transactions').delete().eq('id', id);
+      const { error } = await supabase.from('transactions').delete().eq('id', id);
+      if (error) {
+        console.error('Supabase deleteTransaction:', error.message);
+        set({ transactions: prev });
+      }
     }
   },
 
@@ -286,4 +345,23 @@ export const useNotificationStore = create<any>((set) => ({
   ],
   unreadCount: 1,
   markAsRead: (id: string) => set({ unreadCount: 0 })
+}));
+
+export interface ToastItem {
+  id: string;
+  message: string;
+  type: 'success' | 'error';
+}
+export const useToastStore = create<{
+  toasts: ToastItem[];
+  addToast: (message: string, type?: 'success' | 'error') => void;
+  removeToast: (id: string) => void;
+}>((set) => ({
+  toasts: [],
+  addToast: (message, type = 'success') => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    set((state) => ({ toasts: [...state.toasts, { id, message, type }] }));
+    return id;
+  },
+  removeToast: (id) => set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) })),
 }));

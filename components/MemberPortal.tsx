@@ -53,7 +53,7 @@ const MemberPortal: React.FC<MemberPortalProps> = ({ currentUser }) => {
     if (editingMember) {
       updateMember({ ...editingMember, ...form } as Member);
     } else {
-      addMember({ ...form, id: `m-${Date.now()}`, choirId: 'c-thienthan', status: 'ACTIVE' } as Member);
+      addMember({ ...form, id: crypto.randomUUID(), choirId: 'c-thienthan', status: 'ACTIVE' } as Member);
     }
     setIsModalOpen(false);
     setEditingMember(null);

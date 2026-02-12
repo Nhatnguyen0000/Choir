@@ -8,13 +8,15 @@ import {
   MoreVertical, UserCircle
 } from 'lucide-react';
 import { Member, MemberStatus } from '../types';
-import { useMemberStore } from '../store';
+import { useMemberStore, useToastStore } from '../store';
+import ConfirmDialog from './ConfirmDialog';
 import * as XLSX from 'xlsx';
 
 type SubTab = 'LIST' | 'ATTENDANCE';
 
 const MemberManagement: React.FC = () => {
   const { members, attendanceData, addMember, updateMember, deleteMember, updateAttendance } = useMemberStore();
+  const addToast = useToastStore((s) => s.addToast);
   
   const [activeTab, setActiveTab] = useState<SubTab>('LIST');
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,6 +24,7 @@ const MemberManagement: React.FC = () => {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: string | null; name: string }>({ open: false, id: null, name: '' });
 
   const initialForm: Partial<Member> = {
     name: '', 
@@ -64,18 +67,22 @@ const MemberManagement: React.FC = () => {
     if (!form.name) return;
     if (editingMember) {
       updateMember({ ...editingMember, ...form } as Member);
+      addToast('Đã cập nhật ca viên');
     } else {
-      addMember({ ...form as Member, id: `CT-${Date.now()}`, choirId: 'c-thienthan' });
+      addMember({ ...form as Member, id: crypto.randomUUID(), choirId: 'c-thienthan', status: (form.status as Member['status']) || 'ACTIVE' });
+      addToast('Đã thêm ca viên mới');
     }
     setIsModalOpen(false);
     setEditingMember(null);
     setForm(initialForm);
   };
 
-  const confirmDelete = (id: string, name: string) => {
-    if (window.confirm(`Xác nhận xóa ca viên "${name.toUpperCase()}" khỏi Danh Sách?`)) {
-      deleteMember(id);
+  const handleConfirmDelete = () => {
+    if (confirmDelete.id) {
+      deleteMember(confirmDelete.id);
+      addToast('Đã xóa ca viên khỏi danh sách');
     }
+    setConfirmDelete({ open: false, id: null, name: '' });
   };
 
   const attendanceStats = useMemo(() => {
@@ -88,10 +95,10 @@ const MemberManagement: React.FC = () => {
   return (
     <div className="w-full space-y-4 animate-fade-in pb-24">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 glass-card p-6 rounded-[2rem] border-white/80 bg-white/40 shadow-sm">
-        <div className="space-y-1">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 glass-card card p-6 rounded-2xl">
+        <div className="space-y-1.5">
           <h1 className="sacred-title text-2xl font-bold text-slate-900 leading-none italic">Sổ Bộ Hiệp Thông</h1>
-          <p className="text-slate-400 text-[9px] font-bold uppercase tracking-[0.3em] mt-1 leading-none italic">Thành viên Ca đoàn Thiên Thần</p>
+          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-[0.3em] mt-1 leading-none italic">Thành viên Ca đoàn Thiên Thần</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <button 
@@ -138,10 +145,10 @@ const MemberManagement: React.FC = () => {
       </div>
 
       {activeTab === 'LIST' ? (
-        <div className="glass-card rounded-[2.5rem] overflow-hidden bg-white/40 border-white shadow-sm">
+        <div className="glass-card card rounded-2xl overflow-hidden">
           <div className="overflow-x-auto scrollbar-hide">
             <table className="w-full text-left min-w-[900px]">
-              <thead className="bg-slate-50/60 border-b border-slate-100 text-slate-400 text-[8px] font-bold uppercase tracking-widest italic">
+              <thead className="bg-slate-50/80 border-b border-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-widest italic">
                 <tr>
                   <th className="px-8 py-5">Tên Thánh</th>
                   <th className="px-6 py-5">Họ và Tên</th>
@@ -156,15 +163,15 @@ const MemberManagement: React.FC = () => {
                 {filteredMembers.map((m) => (
                   <tr key={m.id} className="hover:bg-white/60 transition-colors group">
                     <td className="px-8 py-4">
-                      <span className="text-[12px] font-bold text-amber-700 italic">{m.saintName || '---'}</span>
+                      <span className="text-[13px] font-bold text-amber-700 italic">{m.saintName || '---'}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-[13px] font-bold text-slate-900">{m.name}</span>
+                      <span className="text-[14px] font-bold text-slate-900">{m.name}</span>
                     </td>
-                    <td className="px-4 py-4 text-center text-[12px] text-slate-500 font-medium">{m.birthYear || '---'}</td>
+                    <td className="px-4 py-4 text-center text-[13px] text-slate-500 font-medium">{m.birthYear || '---'}</td>
                     <td className="px-6 py-4 text-[12px] text-slate-500 italic font-medium">{m.grade || '---'}</td>
                     <td className="px-6 py-4">
-                      <span className="px-3 py-1 bg-slate-100/80 border border-slate-200 text-slate-500 rounded-lg text-[8.5px] font-bold uppercase tracking-wider">
+                      <span className="px-3 py-1 bg-slate-100/80 border border-slate-200 text-slate-500 rounded-lg text-[10px] font-bold uppercase tracking-wider">
                         {m.role}
                       </span>
                     </td>
@@ -180,7 +187,7 @@ const MemberManagement: React.FC = () => {
                           <Edit2 size={15} />
                         </button>
                         <button 
-                          onClick={() => confirmDelete(m.id, m.name)}
+                          onClick={() => setConfirmDelete({ open: true, id: m.id, name: m.name })}
                           className="p-2 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded-xl transition-all"
                         >
                           <Trash2 size={15} />
@@ -407,6 +414,16 @@ const MemberManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDelete.open}
+        title="Xóa ca viên"
+        message={`Bạn có chắc muốn xóa ca viên "${confirmDelete.name}" khỏi danh sách? Hành động này không thể hoàn tác.`}
+        confirmLabel="Xóa"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDelete({ open: false, id: null, name: '' })}
+        danger
+      />
     </div>
   );
 };

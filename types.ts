@@ -4,8 +4,7 @@ export enum AppView {
   MEMBERS = 'MEMBERS',
   FINANCE = 'FINANCE',
   LIBRARY = 'LIBRARY',
-  ASSISTANT = 'ASSISTANT',
-  UPDATES = 'UPDATES'
+  ASSISTANT = 'ASSISTANT'
 }
 
 export type LiturgicalColor = 'GREEN' | 'RED' | 'WHITE' | 'VIOLET' | 'GOLD' | 'ROSE';

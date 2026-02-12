@@ -7,21 +7,24 @@ import {
   Calendar as CalendarIcon, Sparkles, Layers, Bell, CheckCircle2,
   CalendarCheck, Search, Globe, RefreshCw
 } from 'lucide-react';
-import { useEventStore, useAppStore } from '../store';
+import { useEventStore, useAppStore, useToastStore } from '../store';
 import { getOrdoForMonth } from '../services/ordoService';
 import { LiturgicalColor, ScheduleEvent, LiturgicalRank, AppView } from '../types';
 import { getAIResponse } from '../services/geminiService';
+import ConfirmDialog from './ConfirmDialog';
 
 type ViewType = 'MONTH' | 'LIST';
 
 const ScheduleManagement: React.FC = () => {
   const { events, addEvent, updateEvent, deleteEvent } = useEventStore();
+  const addToast = useToastStore((s) => s.addToast);
   const [viewType, setViewType] = useState<ViewType>('MONTH');
   const [currentDate, setCurrentDate] = useState(new Date(2026, 0, 1)); 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
   const [selectedDayDate, setSelectedDayDate] = useState<string | null>(new Date(2026, 0, 1).toISOString().split('T')[0]);
   const [isSearchingLiturgy, setIsSearchingLiturgy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: string | null; label: string }>({ open: false, id: null, label: '' });
   
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
@@ -71,11 +74,21 @@ const ScheduleManagement: React.FC = () => {
     if (!form.massName) return;
     if (editingEvent) {
       updateEvent({ ...editingEvent, ...form } as ScheduleEvent);
+      addToast('Đã cập nhật lịch lễ');
     } else {
-      addEvent({ ...form, id: `e-${Date.now()}` } as ScheduleEvent);
+      addEvent({ ...form, id: crypto.randomUUID() } as ScheduleEvent);
+      addToast('Đã thêm lịch lễ mới');
     }
     setIsModalOpen(false);
     setEditingEvent(null);
+  };
+
+  const handleConfirmDeleteEvent = () => {
+    if (confirmDelete.id) {
+      deleteEvent(confirmDelete.id);
+      addToast('Đã xóa lịch lễ');
+    }
+    setConfirmDelete({ open: false, id: null, label: '' });
   };
 
   const calendarCells = useMemo(() => {
@@ -107,23 +120,23 @@ const ScheduleManagement: React.FC = () => {
     <div className="w-full space-y-6 animate-fade-in px-2 pb-12">
       {/* Header Niên Lịch */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <h1 className="sacred-title text-2xl md:text-3xl font-bold text-slate-900 italic tracking-tight">Niên Lịch Phụng Vụ 2026</h1>
-          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.3em] mt-1 italic leading-none">Phụng sự Thiên Chúa qua Thánh Nhạc</p>
+          <p className="text-slate-400 text-[12px] font-bold uppercase tracking-[0.3em] mt-1 italic leading-none">Phụng sự Thiên Chúa qua Thánh Nhạc</p>
         </div>
         <div className="flex items-center gap-2">
-           <div className="flex glass-card p-1.5 rounded-2xl border-white/60 bg-white/10 shadow-none">
-             <button onClick={() => setViewType('MONTH')} className={`px-4 py-1.5 rounded-xl text-[9px] font-bold uppercase transition-all ${viewType === 'MONTH' ? 'bg-white shadow-sm text-slate-900 border border-amberGold/20' : 'text-slate-400'}`}>Tháng</button>
-             <button onClick={() => setViewType('LIST')} className={`px-4 py-1.5 rounded-xl text-[9px] font-bold uppercase transition-all ${viewType === 'LIST' ? 'bg-white shadow-sm text-slate-900 border border-amberGold/20' : 'text-slate-400'}`}>Danh sách</button>
+           <div className="flex glass-card p-2 rounded-2xl border-slate-200/60 bg-white/50">
+             <button onClick={() => setViewType('MONTH')} className={`px-5 py-2 rounded-xl text-[11px] font-bold uppercase transition-all ${viewType === 'MONTH' ? 'bg-white shadow-sm text-slate-900 border border-amberGold/20' : 'text-slate-400'}`}>Tháng</button>
+             <button onClick={() => setViewType('LIST')} className={`px-5 py-2 rounded-xl text-[11px] font-bold uppercase transition-all ${viewType === 'LIST' ? 'bg-white shadow-sm text-slate-900 border border-amberGold/20' : 'text-slate-400'}`}>Danh sách</button>
            </div>
-           <button onClick={() => { setEditingEvent(null); setIsModalOpen(true); }} className="glass-button active-glass px-5 py-2.5 rounded-2xl text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-sm">
-             <Plus size={16} /> <span className="hidden sm:inline">Lập Lịch Đoàn</span>
+           <button onClick={() => { setEditingEvent(null); setIsModalOpen(true); }} className="glass-button active-glass px-5 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 shadow-md">
+             <Plus size={18} /> <span className="hidden sm:inline">Lập Lịch Đoàn</span>
            </button>
         </div>
       </div>
 
       {/* Điều phối thời gian */}
-      <div className="flex items-center justify-between glass-card border-white/60 rounded-2xl p-4 shadow-sm bg-white/40">
+      <div className="flex items-center justify-between glass-card card rounded-2xl p-5">
           <button onClick={() => handleNavigate(-1)} className="p-2 glass-button border-none rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm"><ChevronLeft size={20}/></button>
           <div className="sacred-title text-lg md:text-xl font-bold text-slate-900 uppercase tracking-widest italic">Tháng {currentMonth} • 2026</div>
           <button onClick={() => handleNavigate(1)} className="p-2 glass-button border-none rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm"><ChevronRight size={20}/></button>
@@ -131,10 +144,10 @@ const ScheduleManagement: React.FC = () => {
 
       {viewType === 'MONTH' ? (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8 glass-card rounded-[2.5rem] border-white/60 shadow-sm overflow-hidden p-6 md:p-8 bg-white/40">
+          <div className="lg:col-span-8 glass-card card rounded-2xl overflow-hidden p-6 md:p-8">
             <div className="grid grid-cols-7 gap-1 mb-6">
                {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((day, i) => (
-                 <div key={day} className={`text-center text-[10px] font-bold uppercase tracking-widest ${i === 0 ? 'text-crimsonRed' : 'text-slate-400'}`}>{day}</div>
+                 <div key={day} className={`text-center text-[11px] font-bold uppercase tracking-widest ${i === 0 ? 'text-crimsonRed' : 'text-slate-500'}`}>{day}</div>
                ))}
             </div>
             <div className="grid grid-cols-7 gap-1 md:gap-2">
@@ -228,7 +241,7 @@ const ScheduleManagement: React.FC = () => {
                                   <h5 className="sacred-title text-[14px] font-bold text-slate-900 italic leading-tight group-hover:text-amberGold transition-colors">{e.massName}</h5>
                                   <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
                                      <button onClick={() => { setEditingEvent(e); setForm(e); setIsModalOpen(true); }} className="p-2 glass-button border-none rounded-xl text-slate-300 hover:text-royalBlue bg-white/50"><Edit2 size={14}/></button>
-                                     <button onClick={() => { if(window.confirm('Anh/chị xác nhận xóa lịch hiệp thông này?')) deleteEvent(e.id); }} className="p-2 glass-button border-none rounded-xl text-slate-300 hover:text-crimsonRed bg-white/50"><Trash2 size={14}/></button>
+                                     <button onClick={() => setConfirmDelete({ open: true, id: e.id, label: e.massName })} className="p-2 glass-button border-none rounded-xl text-slate-300 hover:text-crimsonRed bg-white/50"><Trash2 size={14}/></button>
                                   </div>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-4 text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">
@@ -355,6 +368,16 @@ const ScheduleManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDelete.open}
+        title="Xóa lịch lễ"
+        message={`Bạn có chắc muốn xóa "${confirmDelete.label}" khỏi lịch? Hành động này không thể hoàn tác.`}
+        confirmLabel="Xóa"
+        onConfirm={handleConfirmDeleteEvent}
+        onCancel={() => setConfirmDelete({ open: false, id: null, label: '' })}
+        danger
+      />
     </div>
   );
 };
