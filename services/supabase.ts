@@ -13,11 +13,8 @@ export const isSupabaseConfigured = Boolean(
   !supabaseUrl.includes('placeholder')
 );
 
-if (!isSupabaseConfigured) {
-  console.group("☁️ Thông báo hệ thống Cloud");
-  console.warn("Trạng thái: Đang chạy Offline (LocalStorage)");
-  console.info("Lý do: Chưa cấu hình SUPABASE_URL hoặc SUPABASE_ANON_KEY trong file .env");
-  console.groupEnd();
+if (!isSupabaseConfigured && import.meta.env.DEV) {
+  console.info("Trạng thái: Offline (LocalStorage). Cấu hình .env để dùng Supabase.");
 }
 
 // Khởi tạo client an toàn

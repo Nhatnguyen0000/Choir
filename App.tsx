@@ -1,15 +1,24 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { AppView } from './types';
 import Layout from './components/Layout';
-import Dashboard from './components/Dashboard';
-import MemberManagement from './components/MemberManagement';
-import FinanceManagement from './components/FinanceManagement';
-import LibraryManagement from './components/LibraryManagement';
-import ScheduleManagement from './components/ScheduleManagement';
-import AIAssistant from './components/AIAssistant';
 import Login from './components/Login';
 import Toast from './components/Toast';
 import { useAuthStore, useAppStore } from './store';
+
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const MemberManagement = lazy(() => import('./components/MemberManagement'));
+const FinanceManagement = lazy(() => import('./components/FinanceManagement'));
+const LibraryManagement = lazy(() => import('./components/LibraryManagement'));
+const LiturgyPage = lazy(() => import('./components/LiturgyPage'));
+const AIAssistant = lazy(() => import('./components/AIAssistant'));
+
+function PageFallback() {
+  return (
+    <div className="flex items-center justify-center min-h-[200px]">
+      <div className="w-8 h-8 border-2 border-amber-400/60 border-t-amber-500 rounded-full animate-spin" />
+    </div>
+  );
+}
 
 const App: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
@@ -34,9 +43,9 @@ const App: React.FC = () => {
     switch (currentView) {
       case AppView.DASHBOARD: return <Dashboard onNavigate={setCurrentView} />;
       case AppView.MEMBERS: return <MemberManagement />;
-      case AppView.SCHEDULE: return <ScheduleManagement />;
       case AppView.FINANCE: return <FinanceManagement />;
       case AppView.LIBRARY: return <LibraryManagement />;
+      case AppView.LITURGY: return <LiturgyPage />;
       case AppView.ASSISTANT: return <AIAssistant />;
       default: return <Dashboard onNavigate={setCurrentView} />;
     }
@@ -47,7 +56,9 @@ const App: React.FC = () => {
       <Toast />
       <Layout currentView={currentView} setCurrentView={setCurrentView}>
         <div className="animate-fade-in h-full">
-          {renderContent()}
+          <Suspense fallback={<PageFallback />}>
+            {renderContent()}
+          </Suspense>
         </div>
       </Layout>
     </>

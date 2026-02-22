@@ -13,8 +13,33 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: (id) => {
+            if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) return 'vendor-react';
+            if (id.includes('node_modules/zustand')) return 'vendor-zustand';
+            if (id.includes('node_modules/lucide-react')) return 'vendor-lucide';
+            if (id.includes('node_modules/xlsx')) return 'vendor-xlsx';
+            if (id.includes('node_modules/@google/genai')) return 'vendor-genai';
+            if (id.includes('node_modules/@supabase')) return 'vendor-supabase';
+          },
+        },
+      },
+      chunkSizeWarningLimit: 600,
+    },
+    test: {
+      globals: true,
+      environment: 'node',
+      include: ['**/*.test.ts', '**/*.spec.ts'],
+      exclude: ['node_modules', 'dist'],
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'zustand', 'lucide-react', 'xlsx'],
+    },
     define: {
-      'process.env.API_KEY': JSON.stringify(env.API_KEY || process.env.API_KEY || ''),
+      'process.env.API_KEY': JSON.stringify(env.API_KEY || env.VITE_API_KEY || process.env.API_KEY || ''),
+      'import.meta.env.VITE_API_KEY': JSON.stringify(env.VITE_API_KEY || env.API_KEY || ''),
       'process.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL || process.env.SUPABASE_URL || ''),
       'process.env.SUPABASE_ANON_KEY': JSON.stringify(env.SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || ''),
       // Ép inject vào client để trạng thái Supabase luôn đúng

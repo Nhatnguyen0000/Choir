@@ -19,8 +19,14 @@ QUY TẮC KỸ THUẬT (SUPABASE/RLS):
     COMMIT;'
 2. Giải thích rằng RLS là lớp bảo mật, việc tắt nó đi hoặc thêm Policy là cần thiết để ứng dụng hoạt động.`;
 
+const getApiKey = () =>
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_KEY) ||
+  (typeof process !== 'undefined' && process.env?.API_KEY) ||
+  '';
+
 export const getAIResponse = async (prompt: string) => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = getApiKey();
+  const ai = new GoogleGenAI({ apiKey });
   
   try {
     const response = await ai.models.generateContent({

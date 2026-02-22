@@ -48,12 +48,12 @@ const FinanceManagement: React.FC = () => {
   };
 
   return (
-    <div className="w-full space-y-6 animate-fade-in pb-8">
+    <div className="w-full space-y-4 sm:space-y-6 animate-fade-in pb-24 sm:pb-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 glass-card card p-6 rounded-2xl">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 glass-card card p-4 sm:p-6 rounded-2xl">
         <div className="space-y-1.5">
-          <h1 className="sacred-title text-2xl font-bold text-slate-900 leading-none italic">Đoàn Quỹ Minh Bạch</h1>
-          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-[0.3em] mt-1 leading-none italic">Hiệp thông tài chánh cộng đoàn</p>
+          <h1 className="sacred-title text-xl sm:text-2xl font-bold text-slate-900 leading-none italic">Ngân quỹ đoàn</h1>
+          <p className="text-slate-400 text-[11px] font-bold uppercase tracking-widest mt-1 leading-none">Quỹ đoàn • Bắc Hòa</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <button className="flex-1 sm:flex-none glass-button px-5 py-2.5 rounded-xl text-[9px] font-bold uppercase tracking-widest text-slate-600 hover:text-royalBlue flex items-center justify-center gap-2">
@@ -66,13 +66,13 @@ const FinanceManagement: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {[
-          { label: 'Số dư hiện có', value: stats.balance, color: 'text-slate-900', icon: <Wallet size={18}/>, bg: 'bg-white/50' },
-          { label: 'Tổng ngân thu', value: stats.income, color: 'text-emeraldGreen', icon: <TrendingUp size={18}/>, bg: 'bg-emerald-50/50' },
-          { label: 'Tổng ngân chi', value: stats.expense, color: 'text-rose-500', icon: <TrendingDown size={18}/>, bg: 'bg-rose-50/50' },
+          { label: 'Số dư', value: stats.balance, color: 'text-slate-900', icon: <Wallet size={18}/>, bg: 'bg-white/50' },
+          { label: 'Thu', value: stats.income, color: 'text-emeraldGreen', icon: <TrendingUp size={18}/>, bg: 'bg-emerald-50/50' },
+          { label: 'Chi', value: stats.expense, color: 'text-rose-500', icon: <TrendingDown size={18}/>, bg: 'bg-rose-50/50' },
         ].map((m, idx) => (
-          <div key={idx} className={`glass-card card p-6 rounded-2xl flex flex-col items-center text-center gap-4 ${m.bg}`}>
+          <div key={idx} className={`glass-card card p-4 sm:p-6 rounded-xl sm:rounded-2xl flex flex-col items-center text-center gap-3 sm:gap-4 ${m.bg}`}>
              <div className={`p-3 rounded-xl bg-white shadow-sm border border-slate-100 ${m.color === 'text-slate-900' ? 'text-slate-400' : m.color}`}>{m.icon}</div>
              <div>
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none italic mb-1.5">{m.label}</p>
@@ -85,8 +85,8 @@ const FinanceManagement: React.FC = () => {
       {/* Transactions Table */}
       <div className="glass-card card rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h3 className="text-[12px] font-bold text-slate-900 uppercase tracking-[0.2em] flex items-center gap-3 italic">
-              <History size={16} className="text-amberGold" /> Nhật ký hiệp thông tài chính
+            <h3 className="text-[11px] sm:text-[12px] font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2 sm:gap-3">
+              <History size={16} className="text-amberGold shrink-0" /> Nhật ký giao dịch
             </h3>
             <div className="relative w-full md:w-64">
                <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
@@ -143,8 +143,8 @@ const FinanceManagement: React.FC = () => {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-md">
-          <div className="glass-card w-full max-w-md rounded-[2.5rem] p-8 relative z-10 bg-white shadow-2xl animate-in zoom-in-95 border-white">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 sm:p-6 min-h-screen overflow-y-auto bg-slate-900/55 backdrop-blur-md">
+          <div className="glass-card w-full max-w-md rounded-2xl p-8 my-auto relative z-10 bg-white shadow-2xl animate-in zoom-in-95 border-white">
              <div className="flex justify-between items-start mb-8">
                <div className="space-y-1">
                  <h3 className="sacred-title text-2xl font-bold text-slate-900 italic leading-none">Lập Phiếu Thu Chi</h3>

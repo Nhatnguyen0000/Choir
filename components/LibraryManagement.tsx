@@ -48,46 +48,45 @@ const LibraryManagement: React.FC = () => {
   const liturgicalSeasonsList = ['Mùa Vọng', 'Giáng Sinh', 'Mùa Chay', 'Phục Sinh', 'Thường Niên', 'Kính Đức Mẹ', 'Lễ Các Thánh'];
 
   return (
-    <div className="w-full space-y-8 animate-fade-in pb-16 px-2">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
-        <div className="space-y-5 flex-1">
-           <div className="space-y-2">
-             <h2 className="sacred-title text-3xl font-bold text-slate-900 italic tracking-tight uppercase">Thư Viện Âm Ca</h2>
-             <p className="text-slate-400 text-[12px] font-bold uppercase tracking-[0.3em] italic leading-none">Kho tàng thánh nhạc cộng đoàn</p>
+    <div className="w-full space-y-4 sm:space-y-6 animate-fade-in pb-24 sm:pb-16 px-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 px-0 sm:px-2">
+        <div className="space-y-3 sm:space-y-4 flex-1 min-w-0">
+           <div className="space-y-1">
+             <h2 className="sacred-title text-2xl sm:text-3xl font-bold text-slate-900 italic tracking-tight leading-tight">Thư viện thánh ca</h2>
+             <p className="text-slate-400 text-[11px] sm:text-[12px] font-bold uppercase tracking-widest leading-none">Ca Đoàn Thiên Thần</p>
            </div>
-           
-           <div className="flex gap-2.5 w-full overflow-x-auto scrollbar-hide pb-2">
+           <div className="flex gap-2 w-full overflow-x-auto scrollbar-hide pb-1">
               {['Tất cả', ...liturgicalSeasonsList.slice(0, 5)].map(s => (
-                 <button key={s} className="px-5 py-2.5 rounded-2xl glass-button text-[9px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap bg-white/30 border-white/50">
+                 <button key={s} className="px-4 py-2 rounded-xl glass-button text-[9px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap bg-white/30 border-white/50 shrink-0">
                     {s}
                  </button>
               ))}
            </div>
         </div>
-        <button onClick={() => { setEditingSong(null); setIsModalOpen(true); }} className="glass-button active-glass px-8 py-3.5 rounded-2xl text-[10px] font-bold uppercase tracking-widest flex items-center gap-3">
-          Ghi bài mới <Plus size={20} />
+        <button onClick={() => { setEditingSong(null); setIsModalOpen(true); }} className="glass-button active-glass px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl text-[10px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 shrink-0">
+          Thêm bài <Plus size={18} />
         </button>
       </div>
 
-      <div className="px-2">
-        <div className="relative group max-w-2xl">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+      <div className="px-0 sm:px-2">
+        <div className="relative max-w-2xl">
+          <Search className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
           <input 
             type="text" 
-            placeholder="Tìm bài hát, nhạc sĩ..." 
-            className="w-full pl-14 pr-6 py-4.5 glass-card rounded-3xl border-white/60 outline-none shadow-sm text-[14px] font-medium bg-white/20 focus:border-amberGold transition-all tracking-tight"
+            placeholder="Tìm bài hát, tác giả..." 
+            className="w-full pl-11 sm:pl-14 pr-4 sm:pr-6 py-3.5 sm:py-4 glass-card rounded-2xl sm:rounded-3xl border-white/60 outline-none shadow-sm text-sm sm:text-[14px] font-medium bg-white/20 focus:border-amberGold transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 px-2 pb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 px-0 sm:px-2 pb-10">
         {filtered.map(s => (
-          <div key={s.id} className="glass-card card p-8 rounded-2xl border-slate-100/80 hover:shadow-xl transition-all group flex flex-col h-full relative overflow-hidden">
-             <div className="flex items-start justify-between mb-6">
-                <div className="w-14 h-14 rounded-2xl bg-white shadow-md border border-slate-100 text-amberGold flex items-center justify-center">
-                   <Music size={26} />
+          <div key={s.id} className="glass-card card p-5 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl border-slate-100/80 hover:shadow-xl transition-all group flex flex-col h-full relative overflow-hidden">
+             <div className="flex items-start justify-between mb-4 sm:mb-6">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-white shadow-md border border-slate-100 text-amberGold flex items-center justify-center shrink-0">
+                   <Music size={22} className="sm:w-6 sm:h-6" />
                 </div>
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
                    <button onClick={() => { setEditingSong(s); setForm(s); setIsModalOpen(true); }} className="p-2.5 glass-button border-none rounded-xl text-slate-300 hover:text-amberGold bg-white/60 shadow-sm"><Edit2 size={16}/></button>
@@ -130,9 +129,8 @@ const LibraryManagement: React.FC = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-6">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-in fade-in" onClick={() => setIsModalOpen(false)}></div>
-          <div className="glass-card w-full max-w-lg rounded-[3.5rem] p-12 relative z-10 bg-white shadow-2xl animate-in zoom-in-95 border-white/60">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 sm:p-6 min-h-screen overflow-y-auto bg-slate-900/55 backdrop-blur-md" onClick={(e) => e.target === e.currentTarget && setIsModalOpen(false)}>
+          <div className="glass-card w-full max-w-lg rounded-2xl p-8 sm:p-12 my-auto relative z-10 bg-white shadow-2xl animate-in zoom-in-95 border-white" onClick={(e) => e.stopPropagation()}>
              <div className="flex justify-between items-start mb-10">
                <div className="space-y-3">
                  <h3 className="sacred-title text-3xl font-bold text-slate-900 italic leading-none tracking-tight">{editingSong ? 'Sửa Bản Nhạc' : 'Thêm Bản Nhạc'}</h3>

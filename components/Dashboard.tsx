@@ -109,14 +109,14 @@ END $$;`;
       ) : (
         <div className="card bg-emerald-50/90 border-emerald-200/60 p-4 rounded-2xl flex items-center gap-3">
            <div className="w-2.5 h-2.5 bg-emeraldGreen rounded-full animate-pulse"></div>
-           <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-widest italic">Dữ liệu đang được bảo vệ & đồng bộ trực tuyến</span>
+           <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-widest italic">Trực tuyến</span>
         </div>
       )}
 
       {/* Setup Guide Modal */}
       {showSetupGuide && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/60">
-          <div className="card w-full max-w-2xl rounded-2xl p-10 relative z-10 bg-white shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto scrollbar-hide">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 sm:p-6 min-h-screen overflow-y-auto backdrop-blur-md bg-slate-900/55">
+          <div className="card w-full max-w-2xl rounded-2xl p-8 sm:p-10 my-auto relative z-10 bg-white shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto scrollbar-hide">
             <div className="flex justify-between items-start mb-8">
               <div className="space-y-1.5">
                 <h3 className="sacred-title text-2xl font-bold text-slate-900 italic leading-none tracking-tight">Cấu hình Hiệp Thông Cloud</h3>
@@ -174,70 +174,70 @@ END $$;`;
       )}
 
       {/* Hero Section */}
-      <section className="glass-card rounded-[1.5rem] p-8 md:p-12 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-[0.06] pointer-events-none rotate-12">
-          <Church size={220} />
+      <section className="glass-card rounded-2xl sm:rounded-[1.5rem] p-5 sm:p-6 md:p-10 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-[0.06] pointer-events-none rotate-12">
+          <Church size={160} className="sm:w-[220px] sm:h-[220px]" />
         </div>
-        <div className="relative z-10 space-y-6">
-          <div className="flex items-center gap-2 text-amberGold font-bold uppercase tracking-[0.3em] text-[10px]">
-            <Sparkles size={16} className="animate-pulse" /> 
-            {isCloudMode && <span className="flex items-center gap-1"><Cloud size={12}/> Cloud Trực Tuyến</span>}
+        <div className="relative z-10 space-y-4 sm:space-y-6">
+          <div className="flex items-center gap-2 text-amberGold font-bold uppercase tracking-widest text-[10px]">
+            <Sparkles size={14} className="animate-pulse" /> 
+           
           </div>
-          <h1 className="sacred-title text-3xl md:text-5xl font-bold italic text-slate-900 leading-tight">Hiệp Thông Phụng Sự</h1>
-          <p className="text-slate-600 text-[15px] md:text-lg italic leading-relaxed font-medium opacity-90 max-w-xl">
-            "Hát mừng Chúa một bài ca mới, vì Người đã thực hiện những việc lạ lùng." (Tv 98, 1)
+          <h1 className="sacred-title text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold italic text-slate-900 leading-tight">Hiệp thông phụng vụ</h1>
+          <p className="text-slate-600 text-sm md:text-base italic leading-relaxed font-medium opacity-90 max-w-xl">
+            Quản lý ca đoàn, lịch phụng vụ và thư viện thánh ca — Ca Đoàn Thiên Thần, Bắc Hòa.
           </p>
-          <div className="flex flex-wrap gap-3 pt-2">
-            <button onClick={() => onNavigate(AppView.SCHEDULE)} className="glass-button active-glass px-6 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest shadow-md">Lịch Phụng Vụ</button>
-            <button onClick={() => onNavigate(AppView.MEMBERS)} className="glass-button px-6 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900">Sổ Bộ Hiệp Thông</button>
+          <div className="flex flex-wrap gap-2 sm:gap-3 pt-2">
+            <button onClick={() => onNavigate(AppView.LITURGY)} className="glass-button active-glass px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-widest shadow-md">Lịch Phụng vụ</button>
+            <button onClick={() => onNavigate(AppView.MEMBERS)} className="glass-button px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900">Ca Viên</button>
           </div>
         </div>
       </section>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
-          { label: 'Ca Viên', value: members.length, color: 'text-royalBlue', bg: 'bg-blue-50/40', icon: <Users size={20} /> },
-          { label: 'Độ hiệp thông', value: `${avgAttendance}%`, color: 'text-rose-500', bg: 'bg-rose-50/40', icon: <Heart size={20} /> },
-          { label: 'Đoàn quỹ hiện hữu', value: `${(balance/1000).toLocaleString()}K`, color: 'text-emeraldGreen', bg: 'bg-emerald-50/40', icon: <Wallet size={20} /> },
-          { label: 'Kho tàng âm ca', value: songs.length, color: 'text-liturgicalViolet', bg: 'bg-purple-50/40', icon: <Library size={20} /> },
+          { label: 'Ca viên', value: members.length, color: 'text-royalBlue', bg: 'bg-blue-50/40', icon: <Users size={20} /> },
+          { label: 'Điểm danh (%)', value: `${avgAttendance}%`, color: 'text-rose-500', bg: 'bg-rose-50/40', icon: <Heart size={20} /> },
+          { label: 'Đoàn quỹ', value: `${(balance/1000).toLocaleString()}K`, color: 'text-emeraldGreen', bg: 'bg-emerald-50/40', icon: <Wallet size={20} /> },
+          { label: 'Thánh ca', value: songs.length, color: 'text-liturgicalViolet', bg: 'bg-purple-50/40', icon: <Library size={20} /> },
         ].map((stat, idx) => (
-          <div key={idx} className={`glass-card card ${stat.bg} p-6 rounded-2xl flex flex-col gap-4 border-white/60`}>
-            <div className="w-11 h-11 rounded-xl bg-white/90 shadow-sm flex items-center justify-center text-slate-400 border border-white">
+          <div key={idx} className={`glass-card card ${stat.bg} p-4 sm:p-6 rounded-xl sm:rounded-2xl flex flex-col gap-3 sm:gap-4 border-white/60`}>
+            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-white/90 shadow-sm flex items-center justify-center text-slate-400 border border-white shrink-0">
               {React.cloneElement(stat.icon as React.ReactElement<any>, { className: stat.color })}
             </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-1.5 italic leading-none">{stat.label}</p>
-              <h3 className={`text-xl font-bold tracking-tight ${stat.color} leading-none`}>{stat.value}</h3>
+            <div className="min-w-0">
+              <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 italic leading-none truncate">{stat.label}</p>
+              <h3 className={`text-lg sm:text-xl font-bold tracking-tight ${stat.color} leading-none`}>{stat.value}</h3>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Upcoming Events */}
-        <div className="glass-card card p-8 rounded-2xl space-y-6">
+        <div className="glass-card card p-5 sm:p-6 md:p-8 rounded-2xl space-y-4 sm:space-y-6">
           <div className="flex justify-between items-center border-b border-slate-200/60 pb-4">
             <h3 className="text-[12px] font-bold uppercase tracking-[0.2em] text-slate-900 flex items-center gap-2 italic">
               <Calendar size={18} className="text-amberGold" /> Công Tác Sắp Tới
             </h3>
-            <button onClick={() => onNavigate(AppView.SCHEDULE)} className="text-[10px] font-bold text-amberGold hover:underline italic uppercase tracking-widest">Xem tất cả</button>
+            <button onClick={() => onNavigate(AppView.LITURGY)} className="text-[10px] font-bold text-amberGold hover:underline italic uppercase tracking-widest">Xem lịch phụng vụ</button>
           </div>
           <div className="space-y-4">
             {upcomingEvents.length > 0 ? upcomingEvents.map(event => (
-              <div key={event.id} onClick={() => onNavigate(AppView.SCHEDULE)} className="glass-card p-5 rounded-xl hover:bg-white/90 transition-all border-slate-100/80 group cursor-pointer flex items-center gap-4 shadow-sm">
-                <div className="w-14 h-14 glass-button border-amberGold/20 rounded-xl flex flex-col items-center justify-center group-hover:bg-amberGold group-hover:text-white transition-all shrink-0">
-                   <span className="text-xl font-bold leading-none">{new Date(event.date).getDate()}</span>
-                   <span className="text-[9px] uppercase font-bold opacity-60 mt-1 italic leading-none">T.{new Date(event.date).getMonth()+1}</span>
+              <div key={event.id} onClick={() => onNavigate(AppView.LITURGY)} className="glass-card p-4 sm:p-5 rounded-xl hover:bg-white/90 transition-all border-slate-100/80 group cursor-pointer flex items-center gap-3 sm:gap-4 shadow-sm">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 glass-button border-amberGold/20 rounded-xl flex flex-col items-center justify-center group-hover:bg-amberGold group-hover:text-white transition-all shrink-0">
+                   <span className="text-lg sm:text-xl font-bold leading-none">{new Date(event.date).getDate()}</span>
+                   <span className="text-[8px] sm:text-[9px] uppercase font-bold opacity-60 mt-0.5 leading-none">T.{new Date(event.date).getMonth()+1}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="sacred-title text-[15px] font-bold text-slate-900 truncate italic leading-tight group-hover:text-amberGold transition-colors">{event.massName}</h4>
-                  <div className="flex flex-wrap gap-3 mt-2 opacity-80">
-                    <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-bold uppercase italic leading-none"><Clock size={14} className="text-amberGold" /> {event.time}</span>
-                    <span className="flex items-center gap-1.5 text-[11px] text-slate-500 font-bold uppercase italic leading-none"><MapPin size={14} className="text-slate-400" /> {event.location}</span>
+                  <h4 className="sacred-title text-[13px] sm:text-[15px] font-bold text-slate-900 truncate italic leading-tight group-hover:text-amberGold transition-colors">{event.massName}</h4>
+                  <div className="flex flex-wrap gap-2 sm:gap-3 mt-1.5 opacity-80">
+                    <span className="flex items-center gap-1 text-[10px] sm:text-[11px] text-slate-500 font-bold uppercase leading-none"><Clock size={12} className="text-amberGold shrink-0" /> <span className="truncate">{event.time}</span></span>
+                    <span className="flex items-center gap-1 text-[10px] sm:text-[11px] text-slate-500 font-bold uppercase leading-none truncate"><MapPin size={12} className="text-slate-400 shrink-0" /> <span className="truncate">{event.location}</span></span>
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-slate-300 group-hover:text-amberGold" />
+                <ChevronRight size={16} className="text-slate-300 group-hover:text-amberGold shrink-0" />
               </div>
             )) : (
               <div className="text-center py-14 space-y-2 opacity-40">
@@ -248,20 +248,14 @@ END $$;`;
           </div>
         </div>
 
-        {/* Spiritual Quote */}
-        <div className="glass-card card bg-amber-50/50 p-10 rounded-2xl flex flex-col justify-between border-amber-100/50 overflow-hidden">
-           <Quote size={44} className="text-amberGold/20 italic mb-6" />
-           <div className="space-y-8 relative z-10">
-              <p className="text-xl md:text-2xl font-medium italic text-slate-800 leading-relaxed sacred-title tracking-tight opacity-95">
-                "Bình an cho anh em. Như Chúa Cha đã sai Thầy, Thầy cũng sai anh em." (Ga 20, 21)
+
+        <div className="glass-card card bg-amber-50/50 p-6 sm:p-8 md:p-10 rounded-2xl flex flex-col justify-between border-amber-100/50 overflow-hidden">
+           <Quote size={36} className="text-amberGold/20 mb-4 sm:mb-6" />
+           <div className="space-y-6 relative z-10">
+              <p className="text-base sm:text-lg md:text-xl font-medium italic text-slate-800 leading-relaxed sacred-title tracking-tight opacity-95">
+                Ca Đoàn Thiên Thần — Phụng vụ bằng tiếng hát. Hiệp thông công tác và tài chính đoàn.
               </p>
-              <div className="pt-8 border-t border-amber-100/50 flex justify-between items-end">
-                 <div className="space-y-1.5">
-                   <span className="text-[10px] font-bold text-amber-500 uppercase tracking-[0.4em] italic leading-none block">AMDG • 2026</span>
-                   <p className="text-[9px] text-slate-400 font-bold italic uppercase tracking-widest leading-none">Bắc Hòa Community</p>
-                 </div>
-                 <Church size={36} className="text-amberGold/20" />
-              </div>
+              
            </div>
         </div>
       </div>

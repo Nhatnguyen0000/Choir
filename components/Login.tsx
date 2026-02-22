@@ -50,18 +50,18 @@ const Login: React.FC = () => {
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-amberGold/5 rounded-full blur-[120px]"></div>
       <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-royalBlue/5 rounded-full blur-[120px]"></div>
 
-      <div className="w-full max-w-sm space-y-10 relative z-10">
-        <div className="text-center space-y-4">
-          <div className="inline-flex p-4 glass-card border-amberGold/30 rounded-2xl text-amberGold shadow-lg animate-in zoom-in duration-700 bg-white/60">
-            <Music2 size={36} />
+      <div className="w-full max-w-sm space-y-6 sm:space-y-10 relative z-10 px-1">
+        <div className="text-center space-y-3 sm:space-y-4">
+          <div className="inline-flex p-3 sm:p-4 glass-card border-amberGold/30 rounded-2xl text-amberGold shadow-lg bg-white/60">
+            <Music2 size={32} className="sm:w-9 sm:h-9" />
           </div>
-          <div className="space-y-2">
-             <h1 className="sacred-title text-3xl font-bold text-slate-900 italic tracking-tight uppercase leading-none">Sổ Vàng Hiệp Thông</h1>
-             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.4em] italic leading-none">Niên Giám Công Tác Phụng Vụ</p>
+          <div className="space-y-1">
+             <h1 className="sacred-title text-2xl sm:text-3xl font-bold text-slate-900 italic tracking-tight leading-none">Ca Đoàn Thiên Thần</h1>
+             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Bắc Hòa Community • Đăng nhập</p>
           </div>
         </div>
 
-        <div className="glass-card p-12 rounded-[3.5rem] shadow-2xl border-white/60 bg-white/70 backdrop-blur-2xl">
+        <div className="glass-card p-6 sm:p-8 md:p-12 rounded-3xl sm:rounded-[3.5rem] shadow-2xl border-white/60 bg-white/70 backdrop-blur-2xl">
           <form onSubmit={handleLogin} className="space-y-6">
             {error && (
               <div className="p-4 bg-rose-50/50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-[10px] font-bold shadow-sm animate-in fade-in slide-in-from-top-2">
@@ -106,8 +106,8 @@ const Login: React.FC = () => {
 
         <div className="flex flex-col items-center gap-3">
            <div className="w-12 h-0.5 bg-slate-200 rounded-full"></div>
-           <p className="text-center text-[9px] font-bold text-slate-400 uppercase tracking-[0.4em] italic opacity-60 leading-relaxed">
-             Mọi sự vì Vinh Danh Thiên Chúa<br/>AMDG • BẮC HÒA 2026
+           <p className="text-center text-[9px] font-bold text-slate-400 uppercase tracking-widest opacity-60 leading-relaxed">
+             AMDG • Bắc Hòa 2026
            </p>
         </div>
       </div>

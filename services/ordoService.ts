@@ -2,7 +2,7 @@
 import { LiturgicalColor, OrdoEvent, LiturgicalRank } from '../types';
 
 /**
- * Niên lịch Phụng vụ 2026 (Năm B - Chu kỳ II)
+ * Niên lịch Phụng vụ 2026 (Năm A - Chu kỳ I)
  * Tích hợp đầy đủ Lễ Trọng, Lễ Kính, Lễ Buộc và các Mùa Phụng vụ.
  */
 const SPECIAL_FEASTS_2026: Record<string, Partial<OrdoEvent>> = {
@@ -58,6 +58,14 @@ const SPECIAL_FEASTS_2026: Record<string, Partial<OrdoEvent>> = {
   '2026-12-25': { massName: 'ĐẠI LỄ CHÚA GIÁNG SINH (Lễ Trọng)', liturgicalColor: 'WHITE', rank: 'SOLEMNITY', isObligatory: true },
 };
 
+/** Định dạng ngày theo giờ địa phương YYYY-MM-DD (nhất quán với lịch hiển thị) */
+const toLocalDateString = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 export const getOrdoForMonth = (month: number, year: number): OrdoEvent[] => {
   const dates: OrdoEvent[] = [];
   const firstDay = new Date(year, month - 1, 1);
@@ -91,7 +99,7 @@ export const getOrdoForMonth = (month: number, year: number): OrdoEvent[] => {
   };
 
   for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = toLocalDateString(d);
     const special = SPECIAL_FEASTS_2026[dateStr];
     const season = getSeasonInfo(d);
     

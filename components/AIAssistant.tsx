@@ -14,7 +14,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ initialPrompt, onPromptConsum
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<{ role: 'user' | 'ai'; content: string; sources?: any[] }[]>([
-    { role: 'ai', content: 'Kính chào Ban Điều Hành Ca Đoàn Thiên Thần! Nguyện bình an của Chúa ở cùng anh chị! Tôi là Trợ lý AI v2.5, tích hợp tìm kiếm Google Search để hỗ trợ anh chị thông tin Phụng vụ chính xác nhất.' }
+    { role: 'ai', content: 'Chào anh chị! Tôi là Trợ lý AI, hỗ trợ thông tin phụng vụ và công tác ca đoàn. Anh chị có thể hỏi về lịch lễ, thánh ca hoặc gợi ý bài hát theo mùa.' }
   ]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -67,8 +67,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ initialPrompt, onPromptConsum
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-180px)] md:h-[calc(100vh-140px)] space-y-4 animate-fade-in">
-      <div className="flex-1 overflow-auto px-2 space-y-6 scrollbar-hide pb-4">
+    <div className="flex flex-col h-[calc(100vh-11rem)] sm:h-[calc(100vh-10rem)] md:h-[calc(100vh-140px)] space-y-3 sm:space-y-4 animate-fade-in">
+      <div className="flex-1 overflow-auto px-2 sm:px-4 space-y-4 sm:space-y-6 scrollbar-hide pb-20 sm:pb-4">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[90%] md:max-w-[75%] rounded-2xl px-5 py-4 shadow-sm border ${

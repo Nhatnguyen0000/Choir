@@ -1,6 +1,6 @@
 import { AppView } from '../types';
 import { 
-  Music2, LayoutDashboard, Users, CalendarDays, Music, Wallet, LogOut, Sparkles, RefreshCw, CheckCircle2, CloudOff, AlertTriangle
+  Music2, LayoutDashboard, Users, Music, Wallet, LogOut, Sparkles, RefreshCw, CheckCircle2, CloudOff, AlertTriangle, BookOpen
 } from 'lucide-react';
 import { useAuthStore, useAppStore } from '../store';
 import React, { useState, useEffect } from 'react';
@@ -19,7 +19,7 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
 
   const navItems = [
     { id: AppView.DASHBOARD, label: 'Tổng quan', icon: <LayoutDashboard size={14} /> },
-    { id: AppView.SCHEDULE, label: 'Lịch lễ', icon: <CalendarDays size={14} /> },
+    { id: AppView.LITURGY, label: 'Phụng vụ', icon: <BookOpen size={14} /> },
     { id: AppView.LIBRARY, label: 'Thánh Ca', icon: <Music size={14} /> },
     { id: AppView.MEMBERS, label: 'Ca Viên', icon: <Users size={14} /> },
     { id: AppView.FINANCE, label: 'Ngân quỹ', icon: <Wallet size={14} /> },
@@ -28,17 +28,17 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-700 w-full overflow-x-hidden">
-      <header className="sticky top-0 z-[100] px-4 md:px-8 py-3 bg-white/70 backdrop-blur-xl border-b border-slate-200/60 w-full shadow-sm">
-        <div className="w-full flex items-center justify-between h-12">
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setCurrentView(AppView.DASHBOARD)}>
-            <div className="w-10 h-10 glass-button border-amberGold/30 rounded-xl flex items-center justify-center text-amberGold shadow-md group-hover:scale-105 transition-transform">
-              <Music2 size={20} />
+      <header className="sticky top-0 z-[100] px-3 sm:px-4 md:px-8 py-2.5 sm:py-3 bg-white/70 backdrop-blur-xl border-b border-slate-200/60 w-full shadow-sm safe-area-pt">
+        <div className="w-full flex items-center justify-between min-h-[48px] sm:h-12">
+          <div className="flex items-center gap-2 sm:gap-3 cursor-pointer group min-w-0" onClick={() => setCurrentView(AppView.DASHBOARD)}>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 glass-button border-amberGold/30 rounded-xl flex items-center justify-center text-amberGold shadow-md group-hover:scale-105 transition-transform shrink-0">
+              <Music2 size={18} className="sm:w-5 sm:h-5" />
             </div>
-            <div className="flex flex-col">
-              <h1 className="sacred-title font-bold text-[15px] text-slate-900 leading-none italic uppercase tracking-tight">
+            <div className="flex flex-col min-w-0">
+              <h1 className="sacred-title font-bold text-[13px] sm:text-[15px] text-slate-900 leading-none italic uppercase tracking-tight truncate">
                 Ca Đoàn <span className="text-amberGold">Thiên Thần</span>
               </h1>
-              <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 mt-1 leading-none">Bắc Hòa Community</span>
+              <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-0.5 leading-none">Bắc Hòa Community</span>
             </div>
           </div>
 
@@ -75,9 +75,8 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
                 <CloudOff size={16} className="text-slate-400" />
               )}
               <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
-                {isLoading ? 'Đang tải...' : 
-                 realtimeStatus === 'CONNECTED' ? 'Cloud Trực Tuyến' : 
-                 realtimeStatus === 'ERROR' ? 'Lỗi Kết Nối' : 'Chế độ Nội bộ'}
+                {realtimeStatus === 'CONNECTED' ? 'Trực tuyến' : 
+                 realtimeStatus === 'ERROR' ? 'Lỗi kỹ thuật' : 'Nội bộ'}
               </span>
             </div>
 
@@ -105,19 +104,19 @@ const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }
         )}
       </header>
 
-      <main className="flex-1 w-full p-4 md:p-6 animate-fade-in pb-28 lg:pb-8 overflow-y-auto">
-        <div className="w-full max-w-full mx-auto h-full">
+      <main className="flex-1 w-full px-3 py-4 sm:px-4 md:px-6 md:py-6 animate-fade-in pb-24 sm:pb-28 lg:pb-8 overflow-y-auto max-w-[100vw]">
+        <div className="w-full max-w-6xl mx-auto h-full">
           {children}
         </div>
       </main>
 
-      <nav className="fixed bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-lg lg:hidden glass-card border-white/80 p-2 flex items-center justify-around z-[1000] rounded-2xl shadow-xl">
+      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg lg:hidden glass-card border-white/80 p-1.5 sm:p-2 flex items-center justify-around z-[1000] rounded-2xl shadow-xl safe-area-pb">
         {navItems.map((item) => {
           const isActive = currentView === item.id;
           return (
-            <button key={item.id} onClick={() => setCurrentView(item.id)} className={`relative flex-1 flex flex-col items-center justify-center py-3 rounded-xl transition-all ${isActive ? 'active-glass shadow-sm' : 'text-slate-400'}`}>
+            <button key={item.id} onClick={() => setCurrentView(item.id)} className={`relative flex-1 flex flex-col items-center justify-center py-2.5 sm:py-3 rounded-xl transition-all min-h-[56px] touch-manipulation ${isActive ? 'active-glass shadow-sm' : 'text-slate-400'}`}>
               {React.cloneElement(item.icon as React.ReactElement<any>, { size: 20 })}
-              <span className="text-[9px] mt-1.5 font-bold uppercase tracking-tighter">{item.label}</span>
+              <span className="text-[8px] sm:text-[9px] mt-1 font-bold uppercase tracking-tighter">{item.label}</span>
             </button>
           );
         })}

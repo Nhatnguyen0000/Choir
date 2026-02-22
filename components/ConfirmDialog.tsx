@@ -37,9 +37,9 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center p-5 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[2500] flex items-center justify-center p-4 sm:p-6 min-h-screen overflow-y-auto bg-slate-900/55 backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className="card bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="card bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 my-auto"
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"

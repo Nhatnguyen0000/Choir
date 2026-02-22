@@ -1,0 +1,91 @@
+:root { font-size: 14px; } /* Cỡ chữ thoải mái đọc */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    color: #334155;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.65;
+}
+.sacred-title { 
+    font-family: 'Lora', serif;
+    letter-spacing: -0.02em;
+}
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+    width: 100%;
+    border-radius: 1.25rem;
+}
+
+.card {
+    background: #fff;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+.glass-button {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.glass-button:active {
+    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.85);
+}
+
+.active-glass { 
+    background: rgba(251, 191, 36, 0.14);
+    border: 1px solid rgba(251, 191, 36, 0.45);
+    color: #b45309;
+}
+
+.animate-fade-in { 
+    animation: fadeIn 0.35s ease-out forwards;
+    will-change: opacity, transform;
+}
+@keyframes fadeIn { 
+    from { opacity: 0; transform: translateY(6px); } 
+    to { opacity: 1; transform: translateY(0); } 
+}
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+input, select, textarea {
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+@media (max-width: 640px) {
+    :root { font-size: 13px; }
+}
+
+/* Safe area cho điện thoại (notch, home indicator) */
+.safe-area-pt { padding-top: env(safe-area-inset-top, 0); }
+.safe-area-pb { padding-bottom: env(safe-area-inset-bottom, 0); }
+.safe-area-pl { padding-left: env(safe-area-inset-left, 0); }
+.safe-area-pr { padding-right: env(safe-area-inset-right, 0); }
+.touch-manipulation { touch-action: manipulation; }
