@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { supabase, isSupabaseConfigured } from './services/supabase';
+import { getDefaultSeedSongs } from './services/seedSongs';
 import { Member, ScheduleEvent, Song, DailyAttendance, Transaction, AppView } from './types';
 
 const toSnakeCase = (obj: any) => {
@@ -63,6 +64,26 @@ const pendingInsertIds = {
   transactions: new Set<string>(),
 };
 
+const saveToLocal = (state: Partial<AppState>) => {
+  if (isSupabaseConfigured) return;
+  try {
+    const prev = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}');
+    const merged = {
+      members: state.members ?? prev.members ?? [],
+      events: state.events ?? prev.events ?? [],
+      songs: state.songs ?? prev.songs ?? [],
+      transactions: state.transactions ?? prev.transactions ?? [],
+      attendanceData: state.attendanceData ?? prev.attendanceData ?? [],
+    };
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(merged));
+  } catch { /* quota exceeded — silent */ }
+};
+
+const PENDING_TTL_MS = 30_000;
+const schedulePendingCleanup = (bucket: Set<string>, id: string) => {
+  setTimeout(() => bucket.delete(id), PENDING_TTL_MS);
+};
+
 export const useAppStore = create<AppState>((set, get) => ({
   members: [],
   events: [],
@@ -78,15 +99,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     if (!isSupabaseConfigured) {
       const local = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}');
-      set({ 
+      const localSongs = local.songs || [];
+      const seedVersion = 2;
+      const hasSeedV2 = localSongs.some((s: any) => typeof s.id === 'string' && s.id.startsWith('seed-') && Number(s.id.split('-')[1]) >= 30);
+      const needReseed = localSongs.length === 0 || (local._seedVersion || 0) < seedVersion;
+      const userSongs = localSongs.filter((s: any) => !(typeof s.id === 'string' && s.id.startsWith('seed-')));
+      const songs = needReseed ? [...getDefaultSeedSongs(), ...userSongs] : localSongs;
+      const next = {
         members: local.members || [],
         events: local.events || [],
-        songs: local.songs || [],
+        songs,
         transactions: local.transactions || [],
         attendanceData: local.attendanceData || [],
         isLoading: false,
         isCloudMode: false
-      });
+      };
+      set(next);
+      if (needReseed) {
+        const toSave = { ...local, songs, _seedVersion: seedVersion };
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(toSave));
+      }
       return;
     }
 
@@ -210,7 +242,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   addMember: async (member) => {
     const id = String(member.id);
     pendingInsertIds.members.add(id);
-    set(state => ({ members: [...state.members, member] }));
+    schedulePendingCleanup(pendingInsertIds.members, id);
+    set(state => {
+      const next = { members: [...state.members, member] };
+      saveToLocal({ ...state, ...next });
+      return next;
+    });
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('members').insert([toSnakeCase(member)]);
       if (error) {
@@ -223,7 +260,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   updateMember: async (member) => {
     const prev = get().members.find(m => m.id === member.id);
-    set(state => ({ members: state.members.map(m => m.id === member.id ? member : m) }));
+    set(state => {
+      const next = { members: state.members.map(m => m.id === member.id ? member : m) };
+      saveToLocal({ ...state, ...next });
+      return next;
+    });
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('members').update(toSnakeCase(member)).eq('id', member.id);
       if (error) {
@@ -235,7 +276,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   deleteMember: async (id) => {
     const prev = get().members;
-    set(state => ({ members: state.members.filter(m => m.id !== id) }));
+    set(state => {
+      const next = { members: state.members.filter(m => m.id !== id) };
+      saveToLocal({ ...state, ...next });
+      return next;
+    });
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('members').delete().eq('id', id);
       if (error) {
@@ -248,7 +293,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   addEvent: async (event) => {
     const id = String(event.id);
     pendingInsertIds.events.add(id);
-    set(state => ({ events: [...state.events, event] }));
+    schedulePendingCleanup(pendingInsertIds.events, id);
+    set(state => {
+      const next = { events: [...state.events, event] };
+      saveToLocal({ ...state, ...next });
+      return next;
+    });
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('schedule_events').insert([toSnakeCase(event)]);
       if (error) {
@@ -261,7 +311,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   updateEvent: async (event) => {
     const prev = get().events.find(e => e.id === event.id);
-    set(state => ({ events: state.events.map(e => e.id === event.id ? event : e) }));
+    set(state => {
+      const next = { events: state.events.map(e => e.id === event.id ? event : e) };
+      saveToLocal({ ...state, ...next });
+      return next;
+    });
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('schedule_events').update(toSnakeCase(event)).eq('id', event.id);
       if (error) {
@@ -273,7 +327,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   deleteEvent: async (id) => {
     const prev = get().events;
-    set(state => ({ events: state.events.filter(e => e.id !== id) }));
+    set(state => {
+      const next = { events: state.events.filter(e => e.id !== id) };
+      saveToLocal({ ...state, ...next });
+      return next;
+    });
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('schedule_events').delete().eq('id', id);
       if (error) {
@@ -286,7 +344,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   addSong: async (song) => {
     const id = String(song.id);
     pendingInsertIds.songs.add(id);
-    set(state => ({ songs: [...state.songs, song] }));
+    schedulePendingCleanup(pendingInsertIds.songs, id);
+    set(state => {
+      const next = { songs: [...state.songs, song] };
+      saveToLocal({ ...state, ...next });
+      return next;
+    });
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('songs').insert([toSnakeCase(song)]);
       if (error) {
@@ -299,7 +362,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   updateSong: async (song) => {
     const prev = get().songs.find(s => s.id === song.id);
-    set(state => ({ songs: state.songs.map(s => s.id === song.id ? song : s) }));
+    set(state => {
+      const next = { songs: state.songs.map(s => s.id === song.id ? song : s) };
+      saveToLocal({ ...state, ...next });
+      return next;
+    });
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('songs').update(toSnakeCase(song)).eq('id', song.id);
       if (error) {
@@ -311,7 +378,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   deleteSong: async (id) => {
     const prev = get().songs;
-    set(state => ({ songs: state.songs.filter(s => s.id !== id) }));
+    set(state => {
+      const next = { songs: state.songs.filter(s => s.id !== id) };
+      saveToLocal({ ...state, ...next });
+      return next;
+    });
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('songs').delete().eq('id', id);
       if (error) {
@@ -324,7 +395,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   addTransaction: async (tx) => {
     const id = String(tx.id);
     pendingInsertIds.transactions.add(id);
-    set(state => ({ transactions: [...state.transactions, tx] }));
+    schedulePendingCleanup(pendingInsertIds.transactions, id);
+    set(state => {
+      const next = { transactions: [...state.transactions, tx] };
+      saveToLocal({ ...state, ...next });
+      return next;
+    });
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('transactions').insert([toSnakeCase(tx)]);
       if (error) {
@@ -337,7 +413,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   deleteTransaction: async (id) => {
     const prev = get().transactions;
-    set(state => ({ transactions: state.transactions.filter(t => t.id !== id) }));
+    set(state => {
+      const next = { transactions: state.transactions.filter(t => t.id !== id) };
+      saveToLocal({ ...state, ...next });
+      return next;
+    });
     if (isSupabaseConfigured) {
       const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (error) {
@@ -359,6 +439,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     else day.records.push({ memberId, status });
     
     set({ attendanceData: current });
+    saveToLocal({ ...get(), attendanceData: current });
 
     if (isSupabaseConfigured) {
       await supabase.from('attendance').upsert({ 
@@ -376,11 +457,12 @@ export const useEventStore = useAppStore;
 export const useFinanceStore = useAppStore;
 export const useLibraryStore = useAppStore;
 
-export const useAuthStore = create<any>((set) => ({
-  isAuthenticated: true,
-  user: { name: 'Ban Điều Hành', role: 'Ca trưởng' },
-  login: (user: any) => set({ isAuthenticated: true, user }),
-  logout: () => set({ isAuthenticated: false }),
+const DEFAULT_USER = { name: 'Ban Điều Hành', role: 'Ban Điều Hành' };
+
+export const useAuthStore = create<{
+  user: { name: string; role: string } | null;
+}>(() => ({
+  user: DEFAULT_USER,
 }));
 
 export const useNotificationStore = create<any>((set) => ({

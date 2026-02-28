@@ -23,6 +23,7 @@ export default defineConfig(({ mode }) => {
             if (id.includes('node_modules/xlsx')) return 'vendor-xlsx';
             if (id.includes('node_modules/@google/genai')) return 'vendor-genai';
             if (id.includes('node_modules/@supabase')) return 'vendor-supabase';
+            if (id.includes('node_modules/recharts')) return 'vendor-recharts';
           },
         },
       },
@@ -35,7 +36,7 @@ export default defineConfig(({ mode }) => {
       exclude: ['node_modules', 'dist'],
     },
     optimizeDeps: {
-      include: ['react', 'react-dom', 'zustand', 'lucide-react', 'xlsx'],
+      include: ['react', 'react-dom', 'zustand', 'lucide-react', 'xlsx', 'recharts', 'qrcode.react', 'exceljs'],
     },
     define: {
       'process.env.API_KEY': JSON.stringify(env.API_KEY || env.VITE_API_KEY || process.env.API_KEY || ''),

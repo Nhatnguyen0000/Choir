@@ -1,5 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
+import { Button } from './ui/Button';
+import { cn } from '../lib/utils';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -20,70 +22,80 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onCancel,
   danger = true,
 }) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCancel();
     };
-    if (open) {
-      document.addEventListener('keydown', handleEsc);
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.removeEventListener('keydown', handleEsc);
-      document.body.style.overflow = '';
-    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, [open, onCancel]);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[2500] flex items-center justify-center p-4 sm:p-6 min-h-screen overflow-y-auto bg-slate-900/55 backdrop-blur-md animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-[2500] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-dialog-title"
+      aria-describedby="confirm-dialog-desc"
+    >
       <div
-        className="card bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 my-auto"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="confirm-dialog-title"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        aria-hidden
+        onClick={onCancel}
+      />
+      <div
+        ref={contentRef}
+        className={cn(
+          'relative z-[2501] w-full max-w-md p-6',
+          'bg-[var(--background-elevated)] border border-[var(--border)] rounded-[var(--radius-xl)] shadow-[var(--shadow-lg)]'
+        )}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-7">
-          <div className="flex items-start gap-4">
-            <div className={`flex-shrink-0 w-14 h-14 rounded-full flex items-center justify-center ${danger ? 'bg-rose-50 text-rose-500' : 'bg-slate-100 text-slate-600'}`}>
-              <AlertTriangle size={28} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 id="confirm-dialog-title" className="text-lg font-bold text-slate-900 leading-tight">
-                {title}
-              </h3>
-              <p className="mt-2.5 text-[15px] text-slate-500 leading-snug">
-                {message}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex-shrink-0 p-2 text-slate-300 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
-              aria-label="Đóng"
-            >
-              <X size={20} />
-            </button>
+        <div className="flex items-start gap-4">
+          <div
+            className={cn(
+              'flex-shrink-0 w-14 h-14 rounded-[var(--radius-xl)] flex items-center justify-center',
+              danger ? 'bg-[var(--error-bg)]' : 'bg-[var(--background-muted)]'
+            )}
+          >
+            <AlertTriangle
+              size={28}
+              className={danger ? 'text-[var(--error)]' : 'text-[var(--foreground-muted)]'}
+            />
           </div>
-          <div className="mt-7 flex gap-3">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex-1 py-3 rounded-xl text-[13px] font-bold uppercase tracking-wider text-slate-500 hover:bg-slate-100 transition-colors"
-            >
-              Hủy
-            </button>
-            <button
-              type="button"
-              onClick={() => { onConfirm(); onCancel(); }}
-              className={`flex-1 py-3 rounded-xl text-[13px] font-bold uppercase tracking-wider text-white transition-colors ${
-                danger ? 'bg-rose-500 hover:bg-rose-600' : 'bg-slate-800 hover:bg-slate-900'
-              }`}
-            >
-              {confirmLabel}
-            </button>
+          <div className="flex-1 min-w-0">
+            <h2 id="confirm-dialog-title" className="text-lg font-semibold text-[var(--foreground)]">
+              {title}
+            </h2>
+            <p id="confirm-dialog-desc" className="mt-2 text-sm text-[var(--foreground-muted)] leading-snug">
+              {message}
+            </p>
           </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-shrink-0 p-2 rounded-xl hover:bg-[var(--background-muted)] transition-colors min-h-[44px] min-w-[44px] text-[var(--foreground-muted)]"
+            aria-label="Đóng"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="mt-6 flex gap-3">
+          <Button variant="secondary" className="flex-1" onClick={onCancel}>
+            Hủy
+          </Button>
+          <Button
+            variant={danger ? 'destructive' : 'default'}
+            className="flex-1"
+            onClick={onConfirm}
+          >
+            {confirmLabel}
+          </Button>
         </div>
       </div>
     </div>

@@ -1,83 +1,141 @@
 import React, { useMemo, useState } from 'react';
-import { 
-  Users, Heart, Wallet, Library, 
-  Calendar, Clock, MapPin, ChevronRight, 
-  Sparkles, Church, Quote, Cloud,
-  Settings, Copy, CheckCircle2, X,
-  RefreshCw
+import {
+  Users,
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  Library,
+  Calendar,
+  ChevronRight,
+  ChevronLeft,
+  X,
+  Copy,
+  CheckCircle2,
+  RefreshCw,
+  CalendarDays,
+  Music,
+  ListTodo,
+  Sparkles,
 } from 'lucide-react';
-import { useMemberStore, useEventStore, useFinanceStore, useLibraryStore, useAppStore } from '../store';
+import { Button } from './ui/Button';
+import { Card } from './ui/Card';
+import { useMemberStore, useEventStore, useFinanceStore, useLibraryStore, useAuthStore } from '../store';
 import { AppView } from '../types';
+import { getOrdoForMonth } from '../services/ordoService';
+
+const WEEKDAY_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+const MONTH_LABELS_VI: Record<number, string> = {
+  1: 'T1', 2: 'T2', 3: 'T3', 4: 'T4', 5: 'T5', 6: 'T6',
+  7: 'T7', 8: 'T8', 9: 'T9', 10: 'T10', 11: 'T11', 12: 'T12',
+};
+
+function buildCalendarGrid(year: number, month: number) {
+  const first = new Date(year, month - 1, 1);
+  const startDay = first.getDay();
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const cells: { day: number; inMonth: boolean }[] = [];
+  for (let i = 0; i < startDay; i++) cells.push({ day: 0, inMonth: false });
+  for (let d = 1; d <= daysInMonth; d++) cells.push({ day: d, inMonth: true });
+  while (cells.length % 7 !== 0) cells.push({ day: 0, inMonth: false });
+  return cells;
+}
+
+const VESTMENT_DOT: Record<string, string> = {
+  WHITE: '#f8fafc', RED: '#f87171', GREEN: '#86efac',
+  VIOLET: '#c4b5fd', GOLD: '#fcd34d', ROSE: '#fb7185',
+};
 
 interface DashboardProps {
   onNavigate: (view: AppView) => void;
 }
+
+const fullSqlCode = `-- COPY VÀ CHẠY TRONG SUPABASE SQL EDITOR
+CREATE TABLE IF NOT EXISTS members (id TEXT PRIMARY KEY, choir_id TEXT, saint_name TEXT, name TEXT NOT NULL, phone TEXT, gender TEXT, role TEXT, grade TEXT, birth_year TEXT, avatar TEXT, join_date DATE, status TEXT);
+CREATE TABLE IF NOT EXISTS schedule_events (id TEXT PRIMARY KEY, choir_id TEXT, date DATE NOT NULL, time TIME, mass_name TEXT, type TEXT, liturgical_color TEXT, location TEXT, notes TEXT);
+CREATE TABLE IF NOT EXISTS songs (id TEXT PRIMARY KEY, choir_id TEXT, title TEXT NOT NULL, composer TEXT, category TEXT, liturgical_seasons JSONB, is_familiar BOOLEAN DEFAULT FALSE, experience_notes TEXT);
+CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, choir_id TEXT, date DATE NOT NULL, description TEXT, amount NUMERIC, type TEXT, category TEXT);
+CREATE TABLE IF NOT EXISTS attendance (id BIGSERIAL PRIMARY KEY, date DATE NOT NULL, choir_id TEXT, member_id TEXT, status TEXT, UNIQUE(date, member_id));
+ALTER TABLE members REPLICA IDENTITY FULL;
+ALTER TABLE schedule_events REPLICA IDENTITY FULL;
+ALTER TABLE songs REPLICA IDENTITY FULL;
+ALTER TABLE transactions REPLICA IDENTITY FULL;
+ALTER TABLE attendance REPLICA IDENTITY FULL;
+ALTER TABLE members DISABLE ROW LEVEL SECURITY;
+ALTER TABLE schedule_events DISABLE ROW LEVEL SECURITY;
+ALTER TABLE songs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance DISABLE ROW LEVEL SECURITY;`;
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { members, attendanceData, isCloudMode, realtimeStatus } = useMemberStore();
   const { events } = useEventStore();
   const { transactions } = useFinanceStore();
   const { songs } = useLibraryStore();
-  
+  const { user } = useAuthStore();
   const [showSetupGuide, setShowSetupGuide] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date().getMonth() + 1);
+  const [calendarYear, setCalendarYear] = useState(() => new Date().getFullYear());
 
   const balance = useMemo(() => {
-    return transactions.reduce((sum, t) => t.type === 'IN' ? sum + t.amount : sum - t.amount, 0);
+    return transactions.reduce((sum, t) => (t.type === 'IN' ? sum + t.amount : sum - t.amount), 0);
   }, [transactions]);
 
   const avgAttendance = useMemo(() => {
-    if (attendanceData.length === 0) return 0;
-    const totalPresents = attendanceData.reduce((sum, d) => sum + d.records.filter(r => r.status === 'PRESENT' || r.status === 'LATE').length, 0);
-    return Math.round((totalPresents / (attendanceData.length * (members.length || 1))) * 100);
+    if (attendanceData.length === 0 || !members.length) return 0;
+    const totalPresents = attendanceData.reduce(
+      (sum, d) => sum + d.records.filter((r) => r.status === 'PRESENT' || r.status === 'LATE').length,
+      0
+    );
+    return Math.round((totalPresents / (attendanceData.length * members.length)) * 100);
   }, [attendanceData, members.length]);
 
   const upcomingEvents = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    return events.filter(e => e.date >= today).sort((a,b) => a.date.localeCompare(b.date)).slice(0, 3);
+    return events
+      .filter((e) => e.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 5);
   }, [events]);
 
-  const fullSqlCode = `-- COPY VÀ CHẠY TRONG SUPABASE SQL EDITOR
--- 1. Tạo các bảng dữ liệu
-CREATE TABLE IF NOT EXISTS members (id TEXT PRIMARY KEY, choir_id TEXT, saint_name TEXT, name TEXT NOT NULL, phone TEXT, gender TEXT, role TEXT, grade TEXT, birth_year TEXT, avatar TEXT, join_date DATE, status TEXT);
-CREATE TABLE IF NOT EXISTS schedule_events (id TEXT PRIMARY KEY, choir_id TEXT, date DATE NOT NULL, time TIME, mass_name TEXT, type TEXT, liturgical_color TEXT, location TEXT, notes TEXT);
-CREATE TABLE IF NOT EXISTS songs (id TEXT PRIMARY KEY, choir_id TEXT, title TEXT NOT NULL, composer TEXT, category TEXT, liturgical_seasons JSONB, is_familiar BOOLEAN DEFAULT FALSE, experience_notes TEXT);
-CREATE TABLE IF NOT EXISTS transactions (id TEXT PRIMARY KEY, choir_id TEXT, date DATE NOT NULL, description TEXT, amount NUMERIC, type TEXT, category TEXT);
-CREATE TABLE IF NOT EXISTS attendance (id BIGSERIAL PRIMARY KEY, date DATE NOT NULL, choir_id TEXT, member_id TEXT REFERENCES members(id) ON DELETE CASCADE, status TEXT, UNIQUE(date, member_id));
+  const calendarGrid = useMemo(
+    () => buildCalendarGrid(calendarYear, calendarMonth),
+    [calendarYear, calendarMonth]
+  );
 
--- 2. Replica Identity Full (QUAN TRỌNG ĐỂ ĐỒNG BỘ)
-ALTER TABLE members REPLICA IDENTITY FULL;
-ALTER TABLE schedule_events REPLICA IDENTITY FULL;
-ALTER TABLE songs REPLICA IDENTITY FULL;
-ALTER TABLE transactions REPLICA IDENTITY FULL;
-ALTER TABLE attendance REPLICA IDENTITY FULL;
+  const ordoMonth = useMemo(
+    () => getOrdoForMonth(calendarMonth as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12, calendarYear),
+    [calendarMonth, calendarYear]
+  );
 
--- 3. Tắt bảo mật RLS để app kết nối trực tiếp
-ALTER TABLE members DISABLE ROW LEVEL SECURITY;
-ALTER TABLE schedule_events DISABLE ROW LEVEL SECURITY;
-ALTER TABLE songs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
-ALTER TABLE attendance DISABLE ROW LEVEL SECURITY;
+  const specialDates = useMemo(() => {
+    const map: Record<string, string> = {};
+    ordoMonth.forEach((e) => {
+      if (e.liturgicalColor) map[e.date] = e.liturgicalColor;
+    });
+    return map;
+  }, [ordoMonth]);
 
--- 4. Publication cho Realtime (Idempotent script)
-DO $$ 
-DECLARE
-  tables_to_add text[] := ARRAY['members', 'schedule_events', 'songs', 'transactions', 'attendance'];
-  t text;
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
-    CREATE PUBLICATION supabase_realtime;
-  END IF;
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }, []);
 
-  FOR t IN SELECT unnest(tables_to_add) LOOP
-    IF NOT EXISTS (
-      SELECT 1 FROM pg_publication_tables 
-      WHERE pubname = 'supabase_realtime' AND tablename = t
-    ) THEN
-      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE %I', t);
-    END IF;
-  END LOOP;
-END $$;`;
+  const attendanceTrend = useMemo(() => {
+    const now = new Date();
+    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const lastMonth = now.getMonth() === 1
+      ? `${now.getFullYear() - 1}-12`
+      : `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`;
+    const thisTotal = attendanceData
+      .filter((d) => d.date.startsWith(thisMonth))
+      .reduce((s, d) => s + d.records.filter((r) => r.status === 'PRESENT' || r.status === 'LATE').length, 0);
+    const lastTotal = attendanceData
+      .filter((d) => d.date.startsWith(lastMonth))
+      .reduce((s, d) => s + d.records.filter((r) => r.status === 'PRESENT' || r.status === 'LATE').length, 0);
+    if (lastTotal === 0) return thisTotal > 0 ? 1 : 0;
+    return Math.round(((thisTotal - lastTotal) / lastTotal) * 100);
+  }, [attendanceData]);
 
   const copySQL = () => {
     navigator.clipboard.writeText(fullSqlCode);
@@ -85,180 +143,273 @@ END $$;`;
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const goPrevMonth = () => {
+    if (calendarMonth === 1) { setCalendarMonth(12); setCalendarYear((y) => y - 1); }
+    else setCalendarMonth((m) => m - 1);
+  };
+  const goNextMonth = () => {
+    if (calendarMonth === 12) { setCalendarMonth(1); setCalendarYear((y) => y + 1); }
+    else setCalendarMonth((m) => m + 1);
+  };
+
+  const formatMonthDay = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+  };
+
+  const userName = (user?.name === 'Ban Điều Hành' ? 'Ban Điều Hành' : user?.name?.split(' ')[0]) || 'Bạn';
+
   return (
-    <div className="w-full space-y-6 animate-fade-in pb-8">
-      {/* Cloud Sync Status Card */}
-      {!isCloudMode || realtimeStatus === 'ERROR' ? (
-        <div className="card bg-amber-50/90 border-amber-200/80 p-5 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-             <div className="p-3 bg-amber-500 text-white rounded-xl shadow-md">
-                <Settings size={22} className="animate-spin-slow" />
-             </div>
-             <div>
-                <p className="text-[13px] font-bold text-amber-900 leading-tight italic uppercase tracking-wider">Hệ thống đang chạy Ngoại tuyến (Offline)</p>
-                <p className="text-[11px] text-amber-600 mt-1.5 font-medium italic">Dữ liệu hiện chỉ lưu trên máy này. Kết nối Cloud để đồng bộ với các máy khác.</p>
-             </div>
-          </div>
-          <button 
-            onClick={() => setShowSetupGuide(true)} 
-            className="w-full md:w-auto px-6 py-3 bg-amber-600 text-white rounded-xl text-[11px] font-bold uppercase tracking-widest hover:bg-amber-700 transition-all flex items-center justify-center gap-2 shadow-md"
+    <div className="w-full animate-fade-in">
+      {/* ─── Hero ─── */}
+      <section className="dash-welcome flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 py-5 px-5 sm:px-6">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-xl sm:text-2xl font-bold text-[var(--foreground)]">Xin chào {userName}</h2>
+          <p className="text-sm text-[var(--foreground-muted)] mt-0.5">
+            Tổng quan Ban Điều Hành — ca viên, quỹ, thư viện, lịch phụng vụ.
+          </p>
+          <Button
+            onClick={() => onNavigate(AppView.LITURGY)}
+            className="mt-3 bg-[var(--foreground)] hover:opacity-90 text-white border-0 text-sm"
           >
-            <Cloud size={16} /> Hướng dẫn kết nối Cloud
+            Xem lịch phụng vụ <ChevronRight size={16} />
+          </Button>
+        </div>
+        <div className="hidden sm:flex w-16 h-16 rounded-2xl bg-white/50 dark:bg-white/10 items-center justify-center shrink-0">
+          <Music size={36} className="text-[var(--primary)]" />
+        </div>
+      </section>
+
+      {/* ─── Offline banner ─── */}
+      {(!isCloudMode || realtimeStatus === 'ERROR') && (
+        <section className="mt-4">
+          <Card variant="glass" className="flex flex-wrap items-center justify-between gap-4 p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-[var(--primary-muted)]">
+                <RefreshCw size={20} className="text-[var(--primary)]" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[var(--foreground)]">Chạy nội bộ (Offline)</p>
+                <p className="text-xs text-[var(--foreground-muted)] mt-0.5">Dữ liệu lưu tại máy. Kết nối Cloud để đồng bộ.</p>
+              </div>
+            </div>
+            <Button onClick={() => setShowSetupGuide(true)} size="sm">Hướng dẫn Cloud</Button>
+          </Card>
+        </section>
+      )}
+
+      {/* ─── Modal Cloud ─── */}
+      {showSetupGuide && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto liquid-glass rounded-2xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-[var(--foreground)]">Cấu hình Cloud</h3>
+              <button
+                onClick={() => setShowSetupGuide(false)}
+                className="p-2 rounded-xl hover:bg-[var(--background-muted)] min-h-[44px] min-w-[44px] transition-colors text-[var(--foreground-muted)]"
+                aria-label="Đóng"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p className="text-sm text-[var(--foreground-muted)] mb-3">Sao chép mã SQL vào Supabase SQL Editor rồi chạy.</p>
+            <pre className="p-4 rounded-xl text-xs overflow-x-auto max-h-48 overflow-y-auto font-mono bg-[var(--background-muted)] text-[var(--foreground)] border border-[var(--border)]">
+              {fullSqlCode}
+            </pre>
+            <div className="mt-4 flex gap-3 flex-wrap">
+              <Button onClick={copySQL} className="flex items-center gap-2">
+                {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                {copied ? 'Đã sao chép' : 'Sao chép'}
+              </Button>
+              <Button variant="secondary" onClick={() => window.location.reload()} className="flex items-center gap-2">
+                <RefreshCw size={16} /> Tải lại
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── 4 chỉ số ─── */}
+      <section className="mt-6">
+        <h3 className="section-label mb-3">Chỉ số nhanh</h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <button type="button" onClick={() => onNavigate(AppView.MEMBERS)} className="dash-summary-card teal text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shrink-0"><Users size={20} /></div>
+              <div className="min-w-0">
+                <p className="text-xl font-bold tabular-nums truncate">{members.length}</p>
+                <p className="text-xs font-semibold opacity-90">Ca viên</p>
+              </div>
+            </div>
+          </button>
+          <button type="button" onClick={() => onNavigate(AppView.MEMBERS)} className="dash-summary-card gray text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[var(--background-elevated)] flex items-center justify-center shrink-0 text-[var(--foreground-muted)]"><Calendar size={20} /></div>
+              <div className="min-w-0">
+                <p className="text-xl font-bold tabular-nums text-[var(--foreground)]">{avgAttendance}%</p>
+                <p className="text-xs font-semibold opacity-90">Điểm danh TB</p>
+              </div>
+            </div>
+            <p className={`text-[10px] mt-1.5 flex items-center gap-0.5 ${attendanceTrend >= 0 ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+              {attendanceTrend >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+              {attendanceTrend >= 0 ? '+' : ''}{attendanceTrend}% tháng trước
+            </p>
+          </button>
+          <button type="button" onClick={() => onNavigate(AppView.FINANCE)} className="dash-summary-card pink text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shrink-0"><Wallet size={20} /></div>
+              <div className="min-w-0">
+                <p className="text-lg font-bold tabular-nums truncate">
+                  {balance >= 0 ? balance.toLocaleString('vi-VN') : `-${Math.abs(balance).toLocaleString('vi-VN')}`}đ
+                </p>
+                <p className="text-xs font-semibold opacity-90">Số dư quỹ</p>
+              </div>
+            </div>
+          </button>
+          <button type="button" onClick={() => onNavigate(AppView.LIBRARY)} className="dash-summary-card amber text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center shrink-0"><Library size={20} /></div>
+              <div className="min-w-0">
+                <p className="text-xl font-bold tabular-nums text-[var(--foreground)]">{songs.length}</p>
+                <p className="text-xs font-semibold opacity-90">Thánh ca</p>
+              </div>
+            </div>
           </button>
         </div>
-      ) : (
-        <div className="card bg-emerald-50/90 border-emerald-200/60 p-4 rounded-2xl flex items-center gap-3">
-           <div className="w-2.5 h-2.5 bg-emeraldGreen rounded-full animate-pulse"></div>
-           <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-widest italic">Trực tuyến</span>
-        </div>
-      )}
+      </section>
 
-      {/* Setup Guide Modal */}
-      {showSetupGuide && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 sm:p-6 min-h-screen overflow-y-auto backdrop-blur-md bg-slate-900/55">
-          <div className="card w-full max-w-2xl rounded-2xl p-8 sm:p-10 my-auto relative z-10 bg-white shadow-2xl animate-in zoom-in-95 max-h-[90vh] overflow-y-auto scrollbar-hide">
-            <div className="flex justify-between items-start mb-8">
-              <div className="space-y-1.5">
-                <h3 className="sacred-title text-2xl font-bold text-slate-900 italic leading-none tracking-tight">Cấu hình Hiệp Thông Cloud</h3>
-                <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-slate-400 mt-2 italic">Kết nối Supabase để đồng bộ dữ liệu toàn đoàn</p>
-              </div>
-              <button onClick={() => setShowSetupGuide(false)} className="p-3 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-900"><X size={22}/></button>
+      {/* ─── Lịch tháng + Công tác sắp tới ─── */}
+      <section className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Lịch phụng vụ mini */}
+        <div className="dash-card p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <CalendarDays size={18} className="text-[var(--foreground-muted)]" />
+              <h3 className="dash-card-title text-sm">{MONTH_LABELS_VI[calendarMonth]} {calendarYear}</h3>
             </div>
-
-            <div className="space-y-8">
-              <section className="space-y-3">
-                <h4 className="text-[12px] font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-xs">1</div>
-                  Bước 1: Thiết lập Biến môi trường
-                </h4>
-                <div className="p-5 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
-                   <p className="text-[12px] text-slate-500 leading-relaxed italic">
-                     Mở file <code className="bg-slate-200 px-2 py-0.5 rounded text-slate-800 font-bold">.env</code> và dán <strong>URL</strong> {"&"} <strong>Key</strong> từ mục Settings trong Supabase.
-                   </p>
-                </div>
-              </section>
-
-              <section className="space-y-3">
-                <h4 className="text-[12px] font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-xs">2</div>
-                  Bước 2: Khởi tạo Database
-                </h4>
-                <p className="text-[12px] text-slate-500 italic leading-relaxed">
-                  Sao chép mã SQL dưới đây, dán vào <strong>SQL Editor</strong> trên Supabase và nhấn <strong>RUN</strong>:
-                </p>
-                <div className="relative group">
-                  <pre className="p-5 bg-slate-900 text-emerald-400 rounded-xl text-[11px] font-mono overflow-x-auto border border-white/10 shadow-xl max-h-48 overflow-y-auto">
-                    {fullSqlCode}
-                  </pre>
-                  <button 
-                    onClick={copySQL}
-                    className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest"
+            <div className="flex items-center gap-0.5">
+              <button onClick={goPrevMonth} className="p-1.5 hover:bg-[var(--background-muted)] rounded-lg transition-colors min-h-[36px] min-w-[36px]" aria-label="Tháng trước">
+                <ChevronLeft size={16} className="text-[var(--foreground-muted)]" />
+              </button>
+              <button onClick={goNextMonth} className="p-1.5 hover:bg-[var(--background-muted)] rounded-lg transition-colors min-h-[36px] min-w-[36px]" aria-label="Tháng sau">
+                <ChevronRight size={16} className="text-[var(--foreground-muted)]" />
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-7 gap-px text-center">
+            {WEEKDAY_LABELS.map((w) => (
+              <div key={w} className="text-[10px] font-semibold text-[var(--foreground-muted)] py-0.5 uppercase">{w}</div>
+            ))}
+            {calendarGrid.map((cell, i) => {
+              if (!cell.inMonth) return <div key={i} className="aspect-square" />;
+              const dateKey = `${calendarYear}-${String(calendarMonth).padStart(2, '0')}-${String(cell.day).padStart(2, '0')}`;
+              const isToday = dateKey === todayStr;
+              const vestmentColor = specialDates[dateKey];
+              const dotColor = vestmentColor ? VESTMENT_DOT[vestmentColor] : null;
+              const hasColor = !!dotColor && !isToday;
+              return (
+                <div key={i} className="aspect-square flex items-center justify-center p-0.5">
+                  <div
+                    className={`w-full h-full rounded-lg flex items-center justify-center text-[10px] font-semibold transition-all ${
+                      isToday ? 'bg-[var(--foreground)] text-[var(--background)] shadow-sm' : hasColor ? 'text-[var(--foreground)]' : 'text-[var(--foreground-muted)] hover:bg-[var(--background-muted)]'
+                    }`}
+                    style={hasColor ? { backgroundColor: dotColor, opacity: 0.9 } : undefined}
                   >
-                    {copied ? <CheckCircle2 size={16} className="text-emerald-400" /> : <Copy size={16} />}
-                    {copied ? 'Đã sao chép' : 'Sao chép SQL'}
-                  </button>
+                    {cell.day}
+                  </div>
                 </div>
-              </section>
+              );
+            })}
+          </div>
+          <button
+            onClick={() => onNavigate(AppView.LITURGY)}
+            className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-[var(--primary)] hover:bg-[var(--primary-muted)] rounded-lg transition-colors"
+          >
+            <CalendarDays size={14} /> Xem lịch phụng vụ
+          </button>
+        </div>
 
-              <div className="pt-4 flex justify-center">
-                 <button 
-                   onClick={() => window.location.reload()} 
-                   className="px-10 py-4 bg-slate-900 text-white rounded-xl text-[12px] font-bold uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-98 transition-all flex items-center gap-3"
-                 >
-                   <RefreshCw size={20} /> Tải lại để kết nối
-                 </button>
-              </div>
+        {/* Công tác sắp tới */}
+        <div className="dash-card p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <ListTodo size={18} className="text-[var(--foreground-muted)]" />
+              <h3 className="dash-card-title">Công tác sắp tới</h3>
             </div>
+            <button
+              onClick={() => onNavigate(AppView.LITURGY)}
+              className="text-xs font-medium text-[var(--primary)] hover:underline flex items-center gap-0.5"
+            >
+              Xem tất cả <ChevronRight size={12} />
+            </button>
           </div>
-        </div>
-      )}
-
-      {/* Hero Section */}
-      <section className="glass-card rounded-2xl sm:rounded-[1.5rem] p-5 sm:p-6 md:p-10 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-4 sm:p-8 opacity-[0.06] pointer-events-none rotate-12">
-          <Church size={160} className="sm:w-[220px] sm:h-[220px]" />
-        </div>
-        <div className="relative z-10 space-y-4 sm:space-y-6">
-          <div className="flex items-center gap-2 text-amberGold font-bold uppercase tracking-widest text-[10px]">
-            <Sparkles size={14} className="animate-pulse" /> 
-           
-          </div>
-          <h1 className="sacred-title text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold italic text-slate-900 leading-tight">Hiệp thông phụng vụ</h1>
-          <p className="text-slate-600 text-sm md:text-base italic leading-relaxed font-medium opacity-90 max-w-xl">
-            Quản lý ca đoàn, lịch phụng vụ và thư viện thánh ca — Ca Đoàn Thiên Thần, Bắc Hòa.
-          </p>
-          <div className="flex flex-wrap gap-2 sm:gap-3 pt-2">
-            <button onClick={() => onNavigate(AppView.LITURGY)} className="glass-button active-glass px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-widest shadow-md">Lịch Phụng vụ</button>
-            <button onClick={() => onNavigate(AppView.MEMBERS)} className="glass-button px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900">Ca Viên</button>
+          <div className="space-y-0.5">
+            {upcomingEvents.length === 0 ? (
+              <p className="text-sm text-[var(--foreground-muted)] py-5 text-center">Chưa có sự kiện. Thêm từ trang Phụng vụ.</p>
+            ) : (
+              upcomingEvents.map((event) => (
+                <button
+                  key={event.id}
+                  type="button"
+                  onClick={() => onNavigate(AppView.LITURGY)}
+                  className="dash-list-item w-full rounded-xl py-2.5"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-[var(--background-muted)] flex items-center justify-center shrink-0">
+                    <Calendar size={16} className="text-[var(--foreground-muted)]" />
+                  </div>
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="text-sm font-medium text-[var(--foreground)] truncate">{event.massName}</p>
+                    <p className="text-xs text-[var(--foreground-muted)]">{formatMonthDay(event.date)} · {event.time || '—'}</p>
+                  </div>
+                  <ChevronRight size={14} className="text-[var(--foreground-muted)] shrink-0" />
+                </button>
+              ))
+            )}
           </div>
         </div>
       </section>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {[
-          { label: 'Ca viên', value: members.length, color: 'text-royalBlue', bg: 'bg-blue-50/40', icon: <Users size={20} /> },
-          { label: 'Điểm danh (%)', value: `${avgAttendance}%`, color: 'text-rose-500', bg: 'bg-rose-50/40', icon: <Heart size={20} /> },
-          { label: 'Đoàn quỹ', value: `${(balance/1000).toLocaleString()}K`, color: 'text-emeraldGreen', bg: 'bg-emerald-50/40', icon: <Wallet size={20} /> },
-          { label: 'Thánh ca', value: songs.length, color: 'text-liturgicalViolet', bg: 'bg-purple-50/40', icon: <Library size={20} /> },
-        ].map((stat, idx) => (
-          <div key={idx} className={`glass-card card ${stat.bg} p-4 sm:p-6 rounded-xl sm:rounded-2xl flex flex-col gap-3 sm:gap-4 border-white/60`}>
-            <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-white/90 shadow-sm flex items-center justify-center text-slate-400 border border-white shrink-0">
-              {React.cloneElement(stat.icon as React.ReactElement<any>, { className: stat.color })}
-            </div>
-            <div className="min-w-0">
-              <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 italic leading-none truncate">{stat.label}</p>
-              <h3 className={`text-lg sm:text-xl font-bold tracking-tight ${stat.color} leading-none`}>{stat.value}</h3>
-            </div>
+      {/* ─── Điểm danh + Truy cập nhanh ─── */}
+      <section className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="dash-card p-4 sm:p-5 flex flex-col items-center">
+          <h3 className="dash-card-title text-sm mb-3 w-full text-left">Điểm danh đạt</h3>
+          <div className="relative w-28 h-28 flex items-center justify-center">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <path className="text-[var(--background-muted)]" stroke="currentColor" strokeWidth="2.5" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path className="text-[var(--primary)]" stroke="currentColor" strokeWidth="2.5" strokeDasharray={`${avgAttendance}, 100`} strokeLinecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+            <span className="absolute text-lg font-bold text-[var(--foreground)]">{avgAttendance}%</span>
           </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-        {/* Upcoming Events */}
-        <div className="glass-card card p-5 sm:p-6 md:p-8 rounded-2xl space-y-4 sm:space-y-6">
-          <div className="flex justify-between items-center border-b border-slate-200/60 pb-4">
-            <h3 className="text-[12px] font-bold uppercase tracking-[0.2em] text-slate-900 flex items-center gap-2 italic">
-              <Calendar size={18} className="text-amberGold" /> Công Tác Sắp Tới
-            </h3>
-            <button onClick={() => onNavigate(AppView.LITURGY)} className="text-[10px] font-bold text-amberGold hover:underline italic uppercase tracking-widest">Xem lịch phụng vụ</button>
-          </div>
-          <div className="space-y-4">
-            {upcomingEvents.length > 0 ? upcomingEvents.map(event => (
-              <div key={event.id} onClick={() => onNavigate(AppView.LITURGY)} className="glass-card p-4 sm:p-5 rounded-xl hover:bg-white/90 transition-all border-slate-100/80 group cursor-pointer flex items-center gap-3 sm:gap-4 shadow-sm">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 glass-button border-amberGold/20 rounded-xl flex flex-col items-center justify-center group-hover:bg-amberGold group-hover:text-white transition-all shrink-0">
-                   <span className="text-lg sm:text-xl font-bold leading-none">{new Date(event.date).getDate()}</span>
-                   <span className="text-[8px] sm:text-[9px] uppercase font-bold opacity-60 mt-0.5 leading-none">T.{new Date(event.date).getMonth()+1}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="sacred-title text-[13px] sm:text-[15px] font-bold text-slate-900 truncate italic leading-tight group-hover:text-amberGold transition-colors">{event.massName}</h4>
-                  <div className="flex flex-wrap gap-2 sm:gap-3 mt-1.5 opacity-80">
-                    <span className="flex items-center gap-1 text-[10px] sm:text-[11px] text-slate-500 font-bold uppercase leading-none"><Clock size={12} className="text-amberGold shrink-0" /> <span className="truncate">{event.time}</span></span>
-                    <span className="flex items-center gap-1 text-[10px] sm:text-[11px] text-slate-500 font-bold uppercase leading-none truncate"><MapPin size={12} className="text-slate-400 shrink-0" /> <span className="truncate">{event.location}</span></span>
-                  </div>
-                </div>
-                <ChevronRight size={16} className="text-slate-300 group-hover:text-amberGold shrink-0" />
-              </div>
-            )) : (
-              <div className="text-center py-14 space-y-2 opacity-40">
-                <Calendar size={44} className="mx-auto text-slate-300" />
-                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest italic leading-none">Chưa có công tác mới</p>
-              </div>
-            )}
-          </div>
+          <p className={`text-xs mt-2 flex items-center gap-1 ${attendanceTrend >= 0 ? 'text-[var(--success)]' : 'text-[var(--error)]'}`}>
+            {attendanceTrend >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+            {attendanceTrend >= 0 ? '+' : ''}{attendanceTrend}% so tháng trước
+          </p>
         </div>
 
-
-        <div className="glass-card card bg-amber-50/50 p-6 sm:p-8 md:p-10 rounded-2xl flex flex-col justify-between border-amber-100/50 overflow-hidden">
-           <Quote size={36} className="text-amberGold/20 mb-4 sm:mb-6" />
-           <div className="space-y-6 relative z-10">
-              <p className="text-base sm:text-lg md:text-xl font-medium italic text-slate-800 leading-relaxed sacred-title tracking-tight opacity-95">
-                Ca Đoàn Thiên Thần — Phụng vụ bằng tiếng hát. Hiệp thông công tác và tài chính đoàn.
-              </p>
-              
-           </div>
+        <div className="dash-card lg:col-span-2 p-4 sm:p-5">
+          <h3 className="dash-card-title text-sm mb-4">Truy cập nhanh</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[
+              { label: 'Ca viên', icon: Users, view: AppView.MEMBERS, color: 'text-[var(--primary)]', bg: 'bg-[var(--primary-muted)]' },
+              { label: 'Ngân quỹ', icon: Wallet, view: AppView.FINANCE, color: 'text-pink-500', bg: 'bg-pink-500/10' },
+              { label: 'Thư viện', icon: Music, view: AppView.LIBRARY, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+              { label: 'Trợ lý AI', icon: Sparkles, view: AppView.ASSISTANT, color: 'text-violet-500', bg: 'bg-violet-500/10' },
+            ].map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => onNavigate(item.view)}
+                className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-[var(--border)] hover:border-[var(--primary)]/30 hover:bg-[var(--background-muted)] transition-all group"
+              >
+                <div className={`w-11 h-11 rounded-xl ${item.bg} flex items-center justify-center ${item.color} group-hover:scale-110 transition-transform`}>
+                  <item.icon size={22} />
+                </div>
+                <span className="text-xs font-semibold text-[var(--foreground-muted)] group-hover:text-[var(--foreground)] transition-colors">{item.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

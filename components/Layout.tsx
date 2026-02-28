@@ -1,126 +1,197 @@
 import { AppView } from '../types';
-import { 
-  Music2, LayoutDashboard, Users, Music, Wallet, LogOut, Sparkles, RefreshCw, CheckCircle2, CloudOff, AlertTriangle, BookOpen
+import {
+  LayoutDashboard,
+  Users,
+  Bell,
+  Settings,
+  Calendar,
+  ChevronDown,
+  CalendarDays,
+  Coins,
+  Library,
+  Sparkles,
+  Sun,
+  Moon,
 } from 'lucide-react';
-import { useAuthStore, useAppStore } from '../store';
-import React, { useState, useEffect } from 'react';
+import { useAuthStore } from '../store';
+import { useTheme } from './ThemeProvider';
+import { getOrdoForMonth } from '../services/ordoService';
+import { getSeasonColors } from '../lib/liturgicalSeason';
+import Logo from './Logo';
+import React, { useState, useMemo } from 'react';
 
-interface LayoutProps {
+const HEADER_NAV = [
+  { id: AppView.DASHBOARD, icon: LayoutDashboard, label: 'Tổng quan' },
+  { id: AppView.LITURGY, icon: CalendarDays, label: 'Phụng vụ' },
+  { id: AppView.MEMBERS, icon: Users, label: 'Ca viên' },
+  { id: AppView.FINANCE, icon: Coins, label: 'Quỹ' },
+  { id: AppView.LIBRARY, icon: Library, label: 'Thư viện' },
+  { id: AppView.ASSISTANT, icon: Sparkles, label: 'AI' },
+];
+
+const PAGE_TITLES: Record<AppView, string> = {
+  [AppView.DASHBOARD]: 'Tổng quan',
+  [AppView.LITURGY]: 'Phụng vụ',
+  [AppView.MEMBERS]: 'Ca viên',
+  [AppView.FINANCE]: 'Ngân quỹ',
+  [AppView.LIBRARY]: 'Thư viện',
+  [AppView.ASSISTANT]: 'Trợ lý AI',
+};
+
+const Layout: React.FC<{
   currentView: AppView;
   setCurrentView: (view: AppView) => void;
   children: React.ReactNode;
-}
-
-const Layout: React.FC<LayoutProps> = ({ currentView, setCurrentView, children }) => {
-  const { user, logout } = useAuthStore();
-  const { isCloudMode, realtimeStatus, isLoading } = useAppStore();
-  
+}> = ({ currentView, setCurrentView, children }) => {
+  const { user } = useAuthStore();
+  const { theme, toggleTheme } = useTheme();
   const [showProfile, setShowProfile] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
-  const navItems = [
-    { id: AppView.DASHBOARD, label: 'Tổng quan', icon: <LayoutDashboard size={14} /> },
-    { id: AppView.LITURGY, label: 'Phụng vụ', icon: <BookOpen size={14} /> },
-    { id: AppView.LIBRARY, label: 'Thánh Ca', icon: <Music size={14} /> },
-    { id: AppView.MEMBERS, label: 'Ca Viên', icon: <Users size={14} /> },
-    { id: AppView.FINANCE, label: 'Ngân quỹ', icon: <Wallet size={14} /> },
-    { id: AppView.ASSISTANT, label: 'Trợ lý AI', icon: <Sparkles size={14} /> },
-  ];
+  const notifications = useMemo(() => {
+    const now = new Date();
+    const m = now.getMonth() + 1;
+    const y = now.getFullYear();
+    const ordo = getOrdoForMonth(m as any, y);
+    const todayStr = `${y}-${String(m).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    return ordo
+      .filter((e) => e.date >= todayStr && e.rank !== 'OPTIONAL')
+      .slice(0, 5)
+      .map((e) => ({ date: e.date, title: e.massName, rank: e.rank }));
+  }, []);
+
+  const dateRangeLabel = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const first = new Date(y, m, 1);
+    const last = new Date(y, m + 1, 0);
+    const fmt = (x: Date) => `${x.getDate()}/${x.getMonth() + 1}`;
+    return `${fmt(first)} - ${fmt(last)}`;
+  }, []);
+
+  const seasonColors = useMemo(() => getSeasonColors(new Date()), []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-700 w-full overflow-x-hidden">
-      <header className="sticky top-0 z-[100] px-3 sm:px-4 md:px-8 py-2.5 sm:py-3 bg-white/70 backdrop-blur-xl border-b border-slate-200/60 w-full shadow-sm safe-area-pt">
-        <div className="w-full flex items-center justify-between min-h-[48px] sm:h-12">
-          <div className="flex items-center gap-2 sm:gap-3 cursor-pointer group min-w-0" onClick={() => setCurrentView(AppView.DASHBOARD)}>
-            <div className="w-9 h-9 sm:w-10 sm:h-10 glass-button border-amberGold/30 rounded-xl flex items-center justify-center text-amberGold shadow-md group-hover:scale-105 transition-transform shrink-0">
-              <Music2 size={18} className="sm:w-5 sm:h-5" />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <h1 className="sacred-title font-bold text-[13px] sm:text-[15px] text-slate-900 leading-none italic uppercase tracking-tight truncate">
-                Ca Đoàn <span className="text-amberGold">Thiên Thần</span>
-              </h1>
-              <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-0.5 leading-none">Bắc Hòa Community</span>
-            </div>
+    <div
+      className="min-h-screen bg-[var(--background)]"
+      style={{
+        ['--season-primary' as string]: seasonColors.primary,
+        ['--season-primary-hover' as string]: seasonColors.primaryHover,
+        ['--season-primary-muted' as string]: seasonColors.primaryMuted,
+      } as React.CSSProperties}
+    >
+      {/* Header bo tròn — màu theo mùa phụng vụ */}
+      <header className="header-2026 header-rounded sticky top-0 z-50 safe-area-pt">
+        <div className="header-inner">
+          <div className="header-brand">
+            <Logo size="sm" iconOnly={false} accentColor={seasonColors.primary} />
           </div>
 
-          <nav className="hidden lg:flex items-center gap-2">
-            {navItems.map((item) => {
+          {/* Nav — tích hợp trong header */}
+          <nav className="header-nav" role="navigation" aria-label="Điều hướng chính">
+            {HEADER_NAV.map((item) => {
               const isActive = currentView === item.id;
+              const Icon = item.icon;
               return (
                 <button
                   key={item.id}
+                  type="button"
                   onClick={() => setCurrentView(item.id)}
-                  className={`relative px-4 py-2 rounded-xl flex items-center gap-2 transition-all text-[10px] font-bold uppercase tracking-widest ${
-                    isActive ? 'active-glass shadow-sm' : 'text-slate-500 hover:text-slate-900'
-                  }`}
+                  className={`header-nav-item ${isActive ? 'active' : ''}`}
+                  aria-current={isActive ? 'page' : undefined}
                 >
-                  {item.icon}
-                  <span>{item.label}</span>
+                  <Icon size={20} strokeWidth={2} />
+                  <span className="header-nav-label">{item.label}</span>
                 </button>
               );
             })}
           </nav>
 
-          <div className="flex items-center gap-3">
-            <div className={`hidden sm:flex items-center gap-2.5 px-4 py-2 rounded-full border ${
-              realtimeStatus === 'CONNECTED' ? 'bg-emerald-50/80 border-emerald-200/60' : 
-              realtimeStatus === 'ERROR' ? 'bg-rose-50/80 border-rose-200/60' : 'bg-slate-100/80 border-slate-200/60'
-            }`}>
-              {isLoading || realtimeStatus === 'CONNECTING' ? (
-                <RefreshCw size={16} className="text-amberGold animate-spin" />
-              ) : realtimeStatus === 'CONNECTED' ? (
-                <CheckCircle2 size={16} className="text-emeraldGreen" />
-              ) : realtimeStatus === 'ERROR' ? (
-                <AlertTriangle size={16} className="text-rose-500" />
-              ) : (
-                <CloudOff size={16} className="text-slate-400" />
-              )}
-              <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
-                {realtimeStatus === 'CONNECTED' ? 'Trực tuyến' : 
-                 realtimeStatus === 'ERROR' ? 'Lỗi kỹ thuật' : 'Nội bộ'}
-              </span>
-            </div>
-
-            <button onClick={() => setShowProfile(!showProfile)} className="w-10 h-10 glass-button border-amberGold/20 rounded-xl flex items-center justify-center text-sm font-bold text-slate-900 shadow-md overflow-hidden relative">
-              {user?.name?.[0]}
+          {/* Actions */}
+          <div className="header-actions">
+            <button type="button" className="header-action-btn hidden sm:flex items-center gap-2" title="Khoảng thời gian">
+              <Calendar size={16} />
+              <span className="header-date-label">{dateRangeLabel}</span>
+              <ChevronDown size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="header-icon-btn"
+              aria-label={theme === 'dark' ? 'Sáng' : 'Tối'}
+            >
+              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowNotifications(!showNotifications); setShowProfile(false); }}
+              className="header-icon-btn relative"
+              aria-label="Thông báo"
+            >
+              <Bell size={20} />
+              {notifications.length > 0 && <span className="header-dot" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowProfile(!showProfile)}
+              className="header-avatar"
+              aria-label="Tài khoản"
+            >
+              {(user?.name || 'Ban Điều Hành').slice(0, 2).toUpperCase()}
             </button>
           </div>
         </div>
 
-        {showProfile && (
-          <div className="absolute top-16 right-4 md:right-8 w-52 card p-0 overflow-hidden z-[110] animate-in fade-in zoom-in-95 shadow-xl">
-            <div className="p-5 bg-slate-50/80 border-b border-slate-100 text-center">
-              <p className="text-[13px] font-bold italic sacred-title text-slate-900 leading-none">{user?.name}</p>
-              <p className="text-[9px] uppercase tracking-widest text-slate-400 mt-2 leading-none">{user?.role || 'Ban Điều Hành'}</p>
+        {/* Dropdowns */}
+        {showNotifications && (
+          <div className="header-dropdown header-dropdown-notif">
+            <div className="header-dropdown-head">Lịch phụng vụ sắp tới</div>
+            <div className="header-dropdown-body">
+              {notifications.map((n, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => { setCurrentView(AppView.LITURGY); setShowNotifications(false); }}
+                  className="header-dropdown-row"
+                >
+                  <span className={`header-dot-row ${n.rank === 'SOLEMNITY' ? 'bg-[var(--primary)]' : n.rank === 'FEAST' ? 'bg-[var(--secondary)]' : 'bg-[var(--success)]'}`} />
+                  <div className="min-w-0 text-left">
+                    <p className="header-dropdown-title">{n.title}</p>
+                    <p className="header-dropdown-meta">{n.date}</p>
+                  </div>
+                </button>
+              ))}
+              {notifications.length === 0 && (
+                <p className="text-sm text-[var(--foreground-muted)] text-center py-8">Không có sự kiện sắp tới</p>
+              )}
             </div>
-            {!isCloudMode && (
-               <div className="px-4 py-2.5 bg-amber-50/80 text-[9px] text-amber-700 font-bold uppercase tracking-widest text-center border-b border-amber-100">
-                 Offline: Dữ liệu lưu tại máy
-               </div>
-            )}
-            <button onClick={() => logout()} className="w-full flex items-center justify-center gap-2 py-3.5 hover:bg-rose-50 text-rose-500 text-[10px] font-bold uppercase tracking-widest italic transition-colors">
-              <LogOut size={16} /> Thoát hệ thống
+          </div>
+        )}
+        {showProfile && (
+          <div className="header-dropdown header-dropdown-profile">
+            <div className="header-dropdown-head">
+              <p className="font-semibold text-[var(--foreground)] truncate">{user?.name || 'Ban Điều Hành'}</p>
+              <p className="text-xs text-[var(--foreground-muted)]">{user?.role || 'Ban Điều Hành'}</p>
+            </div>
+            <button type="button" className="header-dropdown-row w-full flex items-center gap-2">
+              <Settings size={18} /> Cài đặt
             </button>
           </div>
         )}
       </header>
 
-      <main className="flex-1 w-full px-3 py-4 sm:px-4 md:px-6 md:py-6 animate-fade-in pb-24 sm:pb-28 lg:pb-8 overflow-y-auto max-w-[100vw]">
-        <div className="w-full max-w-6xl mx-auto h-full">
-          {children}
-        </div>
+      <main className="main-2026">
+        {children}
       </main>
 
-      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg lg:hidden glass-card border-white/80 p-1.5 sm:p-2 flex items-center justify-around z-[1000] rounded-2xl shadow-xl safe-area-pb">
-        {navItems.map((item) => {
-          const isActive = currentView === item.id;
-          return (
-            <button key={item.id} onClick={() => setCurrentView(item.id)} className={`relative flex-1 flex flex-col items-center justify-center py-2.5 sm:py-3 rounded-xl transition-all min-h-[56px] touch-manipulation ${isActive ? 'active-glass shadow-sm' : 'text-slate-400'}`}>
-              {React.cloneElement(item.icon as React.ReactElement<any>, { size: 20 })}
-              <span className="text-[8px] sm:text-[9px] mt-1 font-bold uppercase tracking-tighter">{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+      {(showProfile || showNotifications) && (
+        <div
+          className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px]"
+          onClick={() => { setShowProfile(false); setShowNotifications(false); }}
+          aria-hidden
+        />
+      )}
     </div>
   );
 };

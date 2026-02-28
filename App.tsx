@@ -1,9 +1,9 @@
-import React, { useEffect, lazy, Suspense } from 'react';
+import React, { useEffect, lazy, Suspense, useCallback } from 'react';
 import { AppView } from './types';
 import Layout from './components/Layout';
-import Login from './components/Login';
 import Toast from './components/Toast';
-import { useAuthStore, useAppStore } from './store';
+import { useAppStore, useFinanceStore, useToastStore } from './store';
+import type { CommandType } from './services/aiCommandService';
 
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const MemberManagement = lazy(() => import('./components/MemberManagement'));
@@ -15,29 +15,42 @@ const AIAssistant = lazy(() => import('./components/AIAssistant'));
 function PageFallback() {
   return (
     <div className="flex items-center justify-center min-h-[200px]">
-      <div className="w-8 h-8 border-2 border-amber-400/60 border-t-amber-500 rounded-full animate-spin" />
+      <div className="w-10 h-10 border-2 border-[var(--border)] border-t-[var(--primary)] rounded-full animate-spin" />
     </div>
   );
 }
 
 const App: React.FC = () => {
-  const { isAuthenticated } = useAuthStore();
   const { fetchInitialData, subscribeToChanges } = useAppStore();
+  const addTransaction = useFinanceStore((s) => s.addTransaction);
+  const addToast = useToastStore((s) => s.addToast);
   const [currentView, setCurrentView] = React.useState<AppView>(AppView.DASHBOARD);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchInitialData();
-      const unsubscribe = subscribeToChanges();
-      return () => {
-        if (unsubscribe) unsubscribe();
-      };
-    }
-  }, [isAuthenticated, fetchInitialData, subscribeToChanges]);
+  const handleAICommand = useCallback(
+    (cmd: CommandType) => {
+      if (cmd.type === 'ADD_FINANCE') {
+        addTransaction({
+          id: crypto.randomUUID(),
+          choirId: 'c-thienthan',
+          date: new Date().toISOString().split('T')[0],
+          description: cmd.description || (cmd.direction === 'IN' ? 'Thu (AI)' : 'Chi (AI)'),
+          amount: cmd.amount,
+          type: cmd.direction,
+          category: cmd.direction === 'IN' ? 'Đóng góp' : 'Chi khác',
+        });
+        addToast(cmd.direction === 'IN' ? `Đã ghi thu ${cmd.amount.toLocaleString('vi-VN')}` : `Đã ghi chi ${cmd.amount.toLocaleString('vi-VN')}`);
+      }
+    },
+    [addTransaction, addToast]
+  );
 
-  if (!isAuthenticated) {
-    return <Login />;
-  }
+  useEffect(() => {
+    fetchInitialData();
+    const unsubscribe = subscribeToChanges();
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [fetchInitialData, subscribeToChanges]);
 
   const renderContent = () => {
     switch (currentView) {
@@ -46,7 +59,13 @@ const App: React.FC = () => {
       case AppView.FINANCE: return <FinanceManagement />;
       case AppView.LIBRARY: return <LibraryManagement />;
       case AppView.LITURGY: return <LiturgyPage />;
-      case AppView.ASSISTANT: return <AIAssistant />;
+      case AppView.ASSISTANT:
+        return (
+          <AIAssistant
+            onNavigate={setCurrentView}
+            onExecuteCommand={handleAICommand}
+          />
+        );
       default: return <Dashboard onNavigate={setCurrentView} />;
     }
   };
@@ -55,7 +74,7 @@ const App: React.FC = () => {
     <>
       <Toast />
       <Layout currentView={currentView} setCurrentView={setCurrentView}>
-        <div className="animate-fade-in h-full">
+        <div className="h-full">
           <Suspense fallback={<PageFallback />}>
             {renderContent()}
           </Suspense>

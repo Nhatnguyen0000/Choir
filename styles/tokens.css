@@ -1,0 +1,110 @@
+/* Ban Điều Hành Ca Đoàn Thiên Thần — Design Tokens 2026–2027 */
+
+:root,
+[data-theme="light"] {
+    --font-sans: "Plus Jakarta Sans", "Be Vietnam Pro", system-ui, sans-serif;
+    --font-sacred: Lora, Georgia, serif;
+    /* Colors */
+    --background: #fafafa;
+    --background-elevated: #ffffff;
+    --background-muted: #f4f4f5;
+    --border: #e4e4e7;
+    --border-strong: #d4d4d8;
+    --foreground: #09090b;
+    --foreground-muted: #52525b;
+    --foreground-subtle: #71717a;
+    --primary: #e85d04;
+    --primary-hover: #d54d02;
+    --primary-muted: #fff4ed;
+    --secondary: #0891b2;
+    --success: #22c55e;
+    --success-bg: #dcfce7;
+    --destructive: #ef4444;
+    --error: #ef4444;
+    --error-bg: #fee2e2;
+    --warning: #eab308;
+    --warning-bg: #fef9c3;
+    --bg-muted: #f4f4f5;
+    --text-muted: #52525b;
+
+    /* Glass */
+    --glass-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.6);
+
+    /* Liquid glass — dùng cho header, card, ô (blur + viền sáng + inset) */
+    --liquid-glass-bg: rgba(255, 255, 255, 0.72);
+    --liquid-glass-border: rgba(255, 255, 255, 0.5);
+    --liquid-glass-shadow: 0 4px 24px -4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+    --liquid-glass-blur: 20px;
+    --liquid-glass-saturate: 180%;
+
+    /* Shadows */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 2px 8px -2px rgba(0, 0, 0, 0.1), 0 4px 12px -4px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.15), 0 16px 40px -12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 24px 56px -16px rgba(0, 0, 0, 0.2);
+    --shadow-glow: 0 0 40px -8px rgba(232, 93, 4, 0.4);
+    --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+
+    /* Mùa phụng vụ (override bởi Layout theo ngày) */
+    --season-primary: var(--primary);
+    --season-primary-hover: var(--primary-hover);
+    --season-primary-muted: var(--primary-muted);
+
+    /* Layout */
+    --touch-min: 44px;
+
+    /* Radius */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 18px;
+    --radius-2xl: 24px;
+    --radius-3xl: 28px;
+    --radius-full: 9999px;
+}
+
+[data-theme="dark"] {
+    --season-primary: var(--primary);
+    --season-primary-hover: var(--primary-hover);
+    --season-primary-muted: var(--primary-muted);
+    --font-sans: "Plus Jakarta Sans", "Be Vietnam Pro", system-ui, sans-serif;
+    --font-sacred: Lora, Georgia, serif;
+    --background: #09090b;
+    --background-elevated: #18181b;
+    --background-muted: #27272a;
+    --border: #27272a;
+    --border-strong: #3f3f46;
+    --foreground: #fafafa;
+    --foreground-muted: #a1a1aa;
+    --foreground-subtle: #71717a;
+    --primary: #f97316;
+    --primary-hover: #fb923c;
+    --primary-muted: #431407;
+    --secondary: #06b6d4;
+    --success: #22c55e;
+    --success-bg: #14532d;
+    --destructive: #ef4444;
+    --error: #ef4444;
+    --error-bg: #7f1d1d;
+    --warning: #eab308;
+    --warning-bg: #422006;
+    --bg-muted: #27272a;
+    --text-muted: #a1a1aa;
+
+    --glass-bg: rgba(24, 24, 27, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.06);
+    --liquid-glass-bg: rgba(24, 24, 27, 0.65);
+    --liquid-glass-border: rgba(255, 255, 255, 0.08);
+    --liquid-glass-shadow: 0 8px 32px -8px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+    --liquid-glass-blur: 24px;
+    --liquid-glass-saturate: 160%;
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 2px 12px -2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 8px 32px -8px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 24px 56px -16px rgba(0, 0, 0, 0.5);
+    --shadow-glow: 0 0 40px -8px rgba(249, 115, 22, 0.45);
+    --shadow-inner: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+    --radius-3xl: 28px;
+}

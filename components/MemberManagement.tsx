@@ -1,106 +1,81 @@
-
 import React, { useState, useMemo } from 'react';
-import { 
-  Search, UserPlus, FileDown, 
-  X, Edit2, Trash2, ChevronDown, 
-  Users, Clock, UserCheck, Save,
-  UserCog, PauseCircle
+import {
+  Search, UserPlus, FileDown,
+  X, Edit2, Trash2,
+  Users, Clock, UserCheck,
+  UserCog, PauseCircle, Save,
+  ChevronLeft, ChevronRight, CalendarDays,
 } from 'lucide-react';
 import { Member, MemberStatus } from '../types';
 import { useMemberStore, useToastStore } from '../store';
 import ConfirmDialog from './ConfirmDialog';
-import * as XLSX from 'xlsx';
+import { exportMembersToExcel } from '../services/excelExport';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Card } from './ui/Card';
 
 type SubTab = 'LIST' | 'ATTENDANCE';
 
 const MemberManagement: React.FC = () => {
   const { members, attendanceData, addMember, updateMember, deleteMember, updateAttendance } = useMemberStore();
   const addToast = useToastStore((s) => s.addToast);
-  
+
   const [activeTab, setActiveTab] = useState<SubTab>('LIST');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: string | null; name: string }>({ open: false, id: null, name: '' });
 
   const initialForm: Partial<Member> = {
-    name: '', 
-    saintName: '', 
-    role: 'Thành viên', 
-    phone: '', 
-    status: 'ACTIVE', 
-    gender: 'Nam', 
-    grade: '', 
-    birthYear: '', 
-    joinDate: new Date().toISOString().split('T')[0]
+    name: '', saintName: '', role: 'Thành viên', phone: '', status: 'ACTIVE', gender: 'Nam', grade: '', birthYear: '', joinDate: new Date().toISOString().split('T')[0]
   };
   const [form, setForm] = useState<Partial<Member>>(initialForm);
 
-  const filteredMembers = useMemo(() => {
-    return members.filter(m => 
-      m.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      (m.saintName && m.saintName.toLowerCase().includes(searchTerm.toLowerCase()))
-    ).sort((a, b) => a.name.localeCompare(b.name));
-  }, [members, searchTerm]);
-
-  /** Tách "Họ và tên" thành họ (từ đầu) và tên (từ cuối) để so trùng. */
-  const parseHoTen = (fullName: string) => {
-    const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
-    const ho = parts[0] ?? '';
-    const ten = parts[parts.length - 1] ?? '';
-    return { ho, ten };
+  const getLastName = (fullName: string) => {
+    const parts = fullName.trim().split(/\s+/);
+    return parts[parts.length - 1] || fullName;
   };
 
-  /** Chuẩn hóa để so sánh (bỏ dấu, viết thường). */
-  const normalize = (s: string) => (s || '').trim().toLowerCase();
+  const filteredMembers = useMemo(() => {
+    return members.filter(m =>
+      m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (m.saintName && m.saintName.toLowerCase().includes(searchTerm.toLowerCase()))
+    ).sort((a, b) => {
+      const nameA = getLastName(a.name);
+      const nameB = getLastName(b.name);
+      const cmp = nameA.localeCompare(nameB, 'vi');
+      if (cmp !== 0) return cmp;
+      return a.name.localeCompare(b.name, 'vi');
+    });
+  }, [members, searchTerm]);
 
-  /** Kiểm tra trùng đủ 3 yếu tố: tên thánh + họ + tên. Khác 1 trong 3 thì không trùng. */
+  const normalize = (s: string) => (s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+
   const isDuplicateMember = (saintName: string, fullName: string, excludeId?: string) => {
-    const { ho: newHo, ten: newTen } = parseHoTen(fullName);
     const nSaint = normalize(saintName);
-    const nHo = normalize(newHo);
-    const nTen = normalize(newTen);
+    const nFull = normalize(fullName);
     return members.some(m => {
       if (excludeId && m.id === excludeId) return false;
-      const { ho, ten } = parseHoTen(m.name);
-      return normalize(m.saintName ?? '') === nSaint && normalize(ho) === nHo && normalize(ten) === nTen;
+      return normalize(m.saintName ?? '') === nSaint && normalize(m.name) === nFull;
     });
   };
 
-  const handleExport = () => {
-    const headers = ['STT', 'Tên Thánh', 'Họ và Tên', 'Điện thoại', 'Năm sinh', 'Giọng/Lớp', 'Bổn phận', 'Trạng thái', 'Ngày gia nhập'];
-    const data = filteredMembers.map((m, idx) => [
-      idx + 1,
-      m.saintName || '—',
-      m.name,
-      m.phone || '—',
-      m.birthYear || '—',
-      m.grade || '—',
-      m.role,
-      m.status === 'ACTIVE' ? 'Hoạt động' : m.status === 'ON_LEAVE' ? 'Tạm nghỉ' : 'Nghỉ hẳn',
-      m.joinDate || '—'
-    ]);
-    const wsData = [headers, ...data];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    const colWidths = [
-      { wch: 6 },  // STT
-      { wch: 16 }, // Tên Thánh
-      { wch: 24 }, // Họ và Tên
-      { wch: 14 }, // Điện thoại
-      { wch: 10 }, // Năm sinh
-      { wch: 14 }, // Giọng/Lớp
-      { wch: 14 }, // Bổn phận
-      { wch: 12 }, // Trạng thái
-      { wch: 14 }, // Ngày gia nhập
-    ];
-    ws['!cols'] = colWidths;
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Sổ Bộ Ca Viên');
-    XLSX.writeFile(wb, `SoBo_CaVien_ThienThan_${new Date().toISOString().split('T')[0]}.xlsx`);
-    addToast('Đã xuất file Excel thành công');
+  const handleExport = async () => {
+    const rows = filteredMembers.map((m, idx) => ({
+      stt: idx + 1, saintName: m.saintName || '—', name: m.name, phone: m.phone || '—',
+      birthYear: m.birthYear || '—', grade: m.grade || '—', role: m.role,
+      status: m.status === 'ACTIVE' ? 'Hoạt động' : m.status === 'ON_LEAVE' ? 'Tạm nghỉ' : 'Nghỉ hẳn',
+      joinDate: m.joinDate || '—',
+    }));
+    const filename = `SoBo_CaVien_ThienThan_${new Date().toISOString().split('T')[0]}.xlsx`;
+    try { await exportMembersToExcel(rows, filename); addToast('Đã xuất file Excel thành công'); }
+    catch { addToast('Xuất Excel gặp lỗi. Vui lòng thử lại.', 'error'); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -121,19 +96,12 @@ const MemberManagement: React.FC = () => {
         addMember({ ...form as Member, id: crypto.randomUUID(), choirId: 'c-thienthan', status: (form.status as Member['status']) || 'ACTIVE' });
         addToast('Đã thêm ca viên mới');
       }
-      setIsModalOpen(false);
-      setEditingMember(null);
-      setForm(initialForm);
-    } finally {
-      setIsSubmitting(false);
-    }
+      setIsModalOpen(false); setEditingMember(null); setForm(initialForm);
+    } finally { setIsSubmitting(false); }
   };
 
   const handleConfirmDelete = () => {
-    if (confirmDelete.id) {
-      deleteMember(confirmDelete.id);
-      addToast('Đã xóa ca viên khỏi danh sách');
-    }
+    if (confirmDelete.id) { deleteMember(confirmDelete.id); addToast('Đã xóa ca viên khỏi danh sách'); }
     setConfirmDelete({ open: false, id: null, name: '' });
   };
 
@@ -152,424 +120,368 @@ const MemberManagement: React.FC = () => {
     return { total, presentCount };
   }, [members, attendanceData, selectedDate]);
 
-  const openAddModal = () => {
-    setEditingMember(null);
-    setForm(initialForm);
-    setIsModalOpen(true);
+  const openAddModal = () => { setEditingMember(null); setForm(initialForm); setIsModalOpen(true); };
+
+  const statusBadge = (status: Member['status']) => {
+    const map = {
+      ACTIVE: { label: 'Hoạt động', c: 'pill pill-success' },
+      ON_LEAVE: { label: 'Tạm nghỉ', c: 'pill pill-warning' },
+      RETIRED: { label: 'Nghỉ hẳn', c: 'pill pill-muted' },
+    };
+    const s = map[status] || map.ACTIVE;
+    return <span className={s.c}>{s.label}</span>;
   };
 
   return (
-    <div className="w-full animate-fade-in pb-24 sm:pb-28 bg-gradient-to-b from-slate-50 to-slate-100/60 min-h-[calc(100vh-6rem)]">
-      {/* Header */}
-      <div className="sticky top-0 z-[100] bg-white border-b border-slate-200/80 shadow-sm px-3 py-3 sm:px-4 sm:py-4 md:px-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
-          <div className="flex items-baseline gap-2 sm:gap-4 min-w-0">
-            <div className="relative">
-              <h1 className="sacred-title text-lg sm:text-xl md:text-2xl font-bold text-slate-900 leading-none italic">Ca Viên</h1>
-              <span className="absolute left-0 -bottom-1 w-10 sm:w-12 h-1 bg-amber-400/80 rounded-full" aria-hidden />
-            </div>
-            <p className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest hidden sm:block">Sổ Bộ Ca đoàn Thiên Thần</p>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-            <button
-              onClick={handleExport}
-              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-600 flex items-center justify-center gap-1.5 border border-slate-200/80 bg-slate-50 hover:bg-slate-100 transition-colors touch-manipulation"
-            >
-              <FileDown size={14} className="sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Xuất Excel</span>
-            </button>
-            <button
-              onClick={openAddModal}
-              className="flex-1 sm:flex-none bg-slate-900 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 sm:gap-2 shadow-md hover:bg-slate-800 transition-colors touch-manipulation"
-            >
-              <UserPlus size={14} className="sm:w-4 sm:h-4" /> <span className="hidden sm:inline">Thêm Ca Viên</span>
-            </button>
-          </div>
-        </div>
-        <p className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest mt-1.5 sm:hidden">Sổ Bộ Ca đoàn Thiên Thần</p>
-
-        {/* Tabs + Tìm kiếm */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2 sm:gap-3 mt-3 sm:mt-4">
-          <div className="lg:col-span-8 relative">
-            <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input
+    <div className="w-full animate-fade-in">
+      {/* Tiêu đề + Action bar — kiểu Puzzler */}
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)]">Ca Viên</h1>
+        <p className="text-sm text-[var(--foreground-muted)] mt-1">Sổ Bộ Ban Điều Hành Ca Đoàn Thiên Thần</p>
+        <div className="members-action-bar mt-4">
+          <span className="text-sm text-[var(--foreground-muted)]">Hiển thị <strong className="text-[var(--foreground)]">{filteredMembers.length}</strong> ca viên</span>
+          <div className="flex-1 min-w-0" />
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--foreground-muted)]" size={16} />
+            <Input
               type="text"
               placeholder="Tìm tên, tên thánh..."
-              className="w-full pl-10 sm:pl-11 pr-4 sm:pr-5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl outline-none text-sm bg-slate-50 border border-slate-200/80 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all"
+              className="pl-9 h-10 text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex rounded-xl sm:rounded-2xl bg-slate-100 p-1 border border-slate-200/80">
-            <button
-              onClick={() => setActiveTab('LIST')}
-              className={`flex-1 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold uppercase transition-all tracking-widest touch-manipulation ${activeTab === 'LIST' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              Sổ Bộ
-            </button>
-            <button
-              onClick={() => setActiveTab('ATTENDANCE')}
-              className={`flex-1 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold uppercase transition-all tracking-widest touch-manipulation ${activeTab === 'ATTENDANCE' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-            >
-              Điểm Danh
-            </button>
-          </div>
+          <Button variant="secondary" onClick={handleExport} className="flex items-center gap-2 shrink-0">
+            <FileDown size={16} /> Xuất
+          </Button>
+          <Button onClick={openAddModal} className="flex items-center gap-2 shrink-0">
+            <UserPlus size={16} /> Thêm ca viên
+          </Button>
         </div>
       </div>
 
-      <div className="pt-4 sm:pt-5 px-0 space-y-4 sm:space-y-5">
+      {/* Tabs — Sổ Bộ / Điểm Danh */}
+      <div className="members-page-tabs mb-6">
+        <button
+          type="button"
+          onClick={() => setActiveTab('LIST')}
+          className={`members-page-tab ${activeTab === 'LIST' ? 'active' : ''}`}
+        >
+          Sổ Bộ
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('ATTENDANCE')}
+          className={`members-page-tab ${activeTab === 'ATTENDANCE' ? 'active' : ''}`}
+        >
+          Điểm Danh
+        </button>
+      </div>
+
       {activeTab === 'LIST' ? (
         <>
-          {/* Thẻ thống kê */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden flex">
-              <div className="w-1.5 bg-slate-400 shrink-0" />
-              <div className="flex-1 p-3 sm:p-5 flex items-center gap-3 sm:gap-4 min-w-0">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
-                  <Users size={20} className="sm:w-[22px] sm:h-[22px]" />
+          {/* Thống kê 4 ô */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {[
+              { label: 'Tổng ca viên', value: memberStats.total, icon: Users, iconBg: 'bg-[var(--background-muted)]', iconColor: 'text-[var(--foreground-muted)]' },
+              { label: 'Hoạt động', value: memberStats.active, icon: UserCheck, iconBg: 'bg-[var(--success-bg)]', iconColor: 'text-[var(--success)]' },
+              { label: 'Tạm nghỉ', value: memberStats.onLeave, icon: PauseCircle, iconBg: 'bg-[var(--warning-bg)]', iconColor: 'text-[var(--warning)]' },
+              { label: 'Nghỉ hẳn', value: memberStats.retired, icon: UserCog, iconBg: 'bg-[var(--background-muted)]', iconColor: 'text-[var(--foreground-muted)]' },
+            ].map((s, idx) => (
+              <div key={idx} className="members-stat-card">
+                <div className={`members-stat-icon ${s.iconBg} ${s.iconColor}`}>
+                  <s.icon size={22} />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400 truncate">Tổng ca viên</p>
-                  <p className="text-xl sm:text-2xl font-bold text-slate-900 tabular-nums">{memberStats.total}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden flex">
-              <div className="w-1.5 bg-emerald-500 shrink-0" />
-              <div className="flex-1 p-3 sm:p-5 flex items-center gap-3 sm:gap-4 min-w-0">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
-                  <UserCheck size={20} className="sm:w-[22px] sm:h-[22px]" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400 truncate">Hoạt động</p>
-                  <p className="text-xl sm:text-2xl font-bold text-slate-900 tabular-nums">{memberStats.active}</p>
+                <div>
+                  <p className="members-stat-value">{s.value}</p>
+                  <p className="members-stat-label">{s.label}</p>
                 </div>
               </div>
-            </div>
-            <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden flex">
-              <div className="w-1.5 bg-amber-500 shrink-0" />
-              <div className="flex-1 p-3 sm:p-5 flex items-center gap-3 sm:gap-4 min-w-0">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
-                  <PauseCircle size={20} className="sm:w-[22px] sm:h-[22px]" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400 truncate">Tạm nghỉ</p>
-                  <p className="text-xl sm:text-2xl font-bold text-slate-900 tabular-nums">{memberStats.onLeave}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden flex">
-              <div className="w-1.5 bg-slate-300 shrink-0" />
-              <div className="flex-1 p-3 sm:p-5 flex items-center gap-3 sm:gap-4 min-w-0">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-slate-100 flex items-center justify-center text-slate-500 shrink-0">
-                  <UserCog size={20} className="sm:w-[22px] sm:h-[22px]" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-400 truncate">Nghỉ hẳn</p>
-                  <p className="text-xl sm:text-2xl font-bold text-slate-900 tabular-nums">{memberStats.retired}</p>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
 
-          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto scrollbar-hide max-h-[calc(100vh-360px)] overflow-y-auto">
-              <table className="w-full text-left min-w-[900px]">
-                <thead className="bg-slate-50/80 border-b border-slate-200/80 sticky top-0 z-10">
-                  <tr>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-slate-500">Tên Thánh</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-slate-500">Họ và Tên</th>
-                    <th className="px-4 py-4 text-center text-xs font-bold uppercase tracking-widest text-slate-500">Năm sinh</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-slate-500">Lớp</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-slate-500">Bổn phận</th>
-                    <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-widest text-slate-500">Trạng thái</th>
-                    <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-widest text-slate-500">Tác vụ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100/80">
-                  {filteredMembers.map((m) => (
-                    <tr key={m.id} className="hover:bg-slate-50/60 transition-colors group">
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-bold text-amber-700">{m.saintName || '—'}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-600 shrink-0">
-                            {m.name.trim()[0] || '?'}
-                          </div>
-                          <span className="text-sm font-bold text-slate-900">{m.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-center text-sm text-slate-600">{m.birthYear || '—'}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{m.grade || '—'}</td>
-                      <td className="px-6 py-4">
-                        <span className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">
-                          {m.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-block px-2.5 py-1 rounded-lg text-xs font-bold ${
-                          m.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700' :
-                          m.status === 'ON_LEAVE' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'
-                        }`}>
-                          {m.status === 'ACTIVE' ? 'Hoạt động' : m.status === 'ON_LEAVE' ? 'Tạm nghỉ' : 'Nghỉ hẳn'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => { setEditingMember(m); setForm(m); setIsModalOpen(true); }}
-                            className="p-2 hover:bg-slate-100 text-slate-400 hover:text-royalBlue rounded-lg transition-all"
-                            title="Sửa"
-                          >
-                            <Edit2 size={16} />
-                          </button>
-                          <button
-                            onClick={() => setConfirmDelete({ open: true, id: m.id, name: m.name })}
-                            className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-lg transition-all"
-                            title="Xóa"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredMembers.length === 0 && (
+          {/* Danh sách: card trên mobile, bảng trên desktop */}
+          <div className="space-y-3 md:space-y-0">
+            {/* Mobile: card list */}
+            <div className="block md:hidden space-y-3">
+              {filteredMembers.map((m) => (
+                <div key={m.id} className="members-card-row">
+                  <div className="members-card-avatar">{m.name.trim()[0] || '?'}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-[var(--foreground)] truncate">{m.name}</p>
+                    <p className="text-sm text-[var(--primary)] font-medium">{m.saintName || '—'}</p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="text-xs text-[var(--foreground-muted)] bg-[var(--background-muted)] px-2 py-0.5 rounded-lg">{m.role}</span>
+                      {statusBadge(m.status)}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button type="button" onClick={() => { setEditingMember(m); setForm(m); setIsModalOpen(true); }} className="p-2.5 rounded-xl text-[var(--foreground-muted)] hover:text-[var(--primary)] hover:bg-[var(--primary-muted)] transition-all" title="Sửa">
+                      <Edit2 size={18} />
+                    </button>
+                    <button type="button" onClick={() => setConfirmDelete({ open: true, id: m.id, name: m.name })} className="p-2.5 rounded-xl text-[var(--foreground-muted)] hover:text-[var(--error)] hover:bg-[var(--error-bg)] transition-all" title="Xóa">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {filteredMembers.length === 0 && (
+                <div className="members-empty-state">
+                  <Users size={48} className="mx-auto text-[var(--foreground-muted)] opacity-50 mb-3" />
+                  <p className="text-base font-semibold text-[var(--foreground-muted)]">Chưa ghi nhận ca viên nào</p>
+                  <Button className="mt-4" onClick={openAddModal}>Thêm ca viên đầu tiên</Button>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop: bảng kiểu Puzzler */}
+            <div className="hidden md:block members-data-table-wrap">
+              <div className="overflow-x-auto">
+                <table>
+                  <thead>
                     <tr>
-                      <td colSpan={7} className="py-16 text-center">
-                        <Users size={40} className="mx-auto text-slate-300 mb-2" />
-                        <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Chưa ghi nhận ca viên nào</p>
-                      </td>
+                      <th>Tên Thánh</th>
+                      <th>Họ và Tên</th>
+                      <th className="text-center">Năm sinh</th>
+                      <th>Lớp</th>
+                      <th>Bổn phận</th>
+                      <th className="text-center">Trạng thái</th>
+                      <th className="text-right">Tác vụ</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      ) : (
-        /* Điểm Danh */
-        <div className="space-y-5">
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
-                <Clock size={26} />
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Ngày Điểm Danh</p>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={e => setSelectedDate(e.target.value)}
-                  className="text-base font-bold text-slate-900 bg-transparent outline-none cursor-pointer border-b-2 border-slate-200 mt-1 pb-1 focus:border-amber-400 transition-colors"
-                />
-              </div>
-            </div>
-            <div className="flex gap-12 text-center">
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Hiện diện</p>
-                <p className="text-2xl font-bold text-emerald-600 tabular-nums">{attendanceStats.presentCount}</p>
-              </div>
-              <div className="w-px h-12 bg-slate-200/80" />
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Vắng mặt</p>
-                <p className="text-2xl font-bold text-rose-500 tabular-nums">{attendanceStats.total - attendanceStats.presentCount}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-3xl overflow-hidden border border-slate-200/80 shadow-sm">
-            <div className="overflow-x-auto scrollbar-hide">
-              <table className="w-full text-left min-w-[700px]">
-                <thead className="bg-slate-50/80 border-b border-slate-200/80">
-                  <tr>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-widest text-slate-500">Tên Thánh + Họ và Tên</th>
-                    <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-widest text-slate-500">Ghi nhận</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100/80">
-                  {filteredMembers.map(m => {
-                    const record = attendanceData.find(d => d.date === selectedDate)?.records.find(r => r.memberId === m.id);
-                    const status = record?.status || 'ABSENT';
-                    const oneLineName = [m.saintName, m.name].filter(Boolean).join(' · ') || m.name;
-                    return (
-                      <tr key={m.id} className={`hover:bg-slate-50/80 transition-colors ${status !== 'ABSENT' ? 'bg-slate-50/50' : ''}`}>
-                        <td className="px-6 py-4">
+                  </thead>
+                  <tbody>
+                    {filteredMembers.map((m) => (
+                      <tr key={m.id} className="group">
+                        <td><span className="font-semibold text-[var(--primary)]">{m.saintName || '—'}</span></td>
+                        <td>
                           <div className="flex items-center gap-3">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${status === 'PRESENT' ? 'bg-slate-900 text-white' : status === 'LATE' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-400 border border-slate-200'}`}>
-                              {m.name[0]}
+                            <div className="w-10 h-10 rounded-xl bg-[var(--primary-muted)] flex items-center justify-center text-sm font-bold text-[var(--primary)] shrink-0">
+                              {m.name.trim()[0] || '?'}
                             </div>
-                            <span className="text-sm font-bold text-slate-900 leading-tight truncate">{oneLineName}</span>
+                            <span className="font-medium text-[var(--foreground)]">{m.name}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex justify-end gap-2">
-                            <button 
-                              onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'PRESENT')} 
-                              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${status === 'PRESENT' ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-400 hover:text-emerald-600'}`}
-                              title="Hiện diện"
-                            >
-                              <UserCheck size={20} />
+                        <td className="text-center text-[var(--foreground-muted)]">{m.birthYear || '—'}</td>
+                        <td className="text-[var(--foreground-muted)]">{m.grade || '—'}</td>
+                        <td><span className="pill pill-muted">{m.role}</span></td>
+                        <td className="text-center">{statusBadge(m.status)}</td>
+                        <td className="text-right">
+                          <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button type="button" onClick={() => { setEditingMember(m); setForm(m); setIsModalOpen(true); }} className="p-2 hover:bg-[var(--primary-muted)] text-[var(--foreground-muted)] hover:text-[var(--primary)] rounded-xl transition-all" title="Sửa">
+                              <Edit2 size={16} />
                             </button>
-                            <button 
-                              onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'LATE')} 
-                              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${status === 'LATE' ? 'bg-amber-500 text-white' : 'bg-white border border-slate-200 text-slate-400 hover:text-amber-500'}`}
-                              title="Đến trễ"
-                            >
-                              <Clock size={20} />
-                            </button>
-                            <button 
-                              onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'ABSENT')} 
-                              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${status === 'ABSENT' ? 'bg-rose-500 text-white' : 'bg-white border border-slate-200 text-slate-400 hover:text-rose-500'}`}
-                              title="Báo vắng"
-                            >
-                              <X size={20} />
+                            <button type="button" onClick={() => setConfirmDelete({ open: true, id: m.id, name: m.name })} className="p-2 hover:bg-[var(--error-bg)] text-[var(--foreground-muted)] hover:text-[var(--error)] rounded-xl transition-all" title="Xóa">
+                              <Trash2 size={16} />
                             </button>
                           </div>
                         </td>
                       </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                    ))}
+                    {filteredMembers.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="py-16 text-center">
+                          <div className="members-empty-state inline-block">
+                            <Users size={40} className="mx-auto text-[var(--foreground-muted)] mb-2 opacity-50" />
+                            <p className="text-sm font-semibold text-[var(--foreground-muted)]">Chưa ghi nhận ca viên nào</p>
+                            <Button className="mt-3" onClick={openAddModal}>Thêm ca viên đầu tiên</Button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* Tab Điểm Danh */
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="liquid-glass rounded-2xl p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[var(--primary-muted)] flex items-center justify-center text-[var(--primary)] shrink-0">
+                <CalendarDays size={24} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-[var(--foreground-muted)] uppercase tracking-wide">Ngày điểm danh</p>
+                <div className="flex items-center gap-1 mt-1">
+                  <button type="button" onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d.toISOString().split('T')[0]); }} className="p-1 rounded-lg hover:bg-[var(--background-muted)] text-[var(--foreground-muted)] transition-colors"><ChevronLeft size={16} /></button>
+                  <span className="text-lg font-bold text-[var(--foreground)] tabular-nums min-w-[120px] text-center">
+                    {new Date(selectedDate + 'T00:00:00').toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  </span>
+                  <button type="button" onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d.toISOString().split('T')[0]); }} className="p-1 rounded-lg hover:bg-[var(--background-muted)] text-[var(--foreground-muted)] transition-colors"><ChevronRight size={16} /></button>
+                </div>
+                <button type="button" onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])} className="text-xs text-[var(--primary)] font-medium mt-1 hover:underline">Hôm nay</button>
+              </div>
+            </div>
+            <div className="liquid-glass rounded-2xl p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[var(--success-bg)] flex items-center justify-center text-[var(--success)] shrink-0">
+                <UserCheck size={24} />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-[var(--foreground-muted)] uppercase tracking-wide">Hiện diện</p>
+                <p className="text-2xl font-bold text-[var(--success)] tabular-nums mt-0.5">{attendanceStats.presentCount}<span className="text-sm font-medium text-[var(--foreground-muted)]">/{attendanceStats.total}</span></p>
+              </div>
+            </div>
+            <div className="liquid-glass rounded-2xl p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[var(--error-bg)] flex items-center justify-center text-[var(--error)] shrink-0">
+                <X size={24} />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-[var(--foreground-muted)] uppercase tracking-wide">Vắng mặt</p>
+                <p className="text-2xl font-bold text-[var(--error)] tabular-nums mt-0.5">{attendanceStats.total - attendanceStats.presentCount}<span className="text-sm font-medium text-[var(--foreground-muted)]">/{attendanceStats.total}</span></p>
+              </div>
+            </div>
+          </div>
+
+          {/* Danh sách điểm danh: card mobile, table desktop */}
+          <div className="space-y-3">
+            <div className="block md:hidden space-y-3">
+              {filteredMembers.map(m => {
+                const record = attendanceData.find(d => d.date === selectedDate)?.records.find(r => r.memberId === m.id);
+                const status = record?.status || 'ABSENT';
+                const oneLineName = [m.saintName, m.name].filter(Boolean).join(' · ') || m.name;
+                return (
+                  <div key={m.id} className={`members-card-row ${status !== 'ABSENT' ? 'bg-[var(--background-muted)]/50 border-[var(--secondary)]/30' : ''}`}>
+                    <div className={`members-card-avatar ${status === 'PRESENT' ? 'bg-[var(--secondary)] text-white' : status === 'LATE' ? 'bg-[var(--warning)] text-[var(--background)]' : 'bg-[var(--background-muted)] text-[var(--foreground-muted)]'}`}>
+                      {m.name[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-[var(--foreground)] truncate">{oneLineName}</p>
+                      <p className="text-xs text-[var(--foreground-muted)]">
+                        {status === 'PRESENT' ? 'Hiện diện' : status === 'LATE' ? 'Đến trễ' : 'Vắng mặt'}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'PRESENT')} className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl flex items-center justify-center transition-all ${status === 'PRESENT' ? 'bg-[var(--secondary)] text-white shadow-sm' : 'bg-[var(--background-elevated)] border border-[var(--border)] text-[var(--foreground-muted)] hover:text-[var(--secondary)] hover:border-[var(--secondary)]/50'}`} title="Hiện diện">
+                        <UserCheck size={20} />
+                      </button>
+                      <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'LATE')} className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl flex items-center justify-center transition-all ${status === 'LATE' ? 'bg-[var(--warning)] text-[var(--background)] shadow-sm' : 'bg-[var(--background-elevated)] border border-[var(--border)] text-[var(--foreground-muted)] hover:text-[var(--warning)] hover:border-[var(--warning)]/50'}`} title="Đến trễ">
+                        <Clock size={20} />
+                      </button>
+                      <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'ABSENT')} className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl flex items-center justify-center transition-all ${status === 'ABSENT' ? 'bg-[var(--error)] text-white shadow-sm' : 'bg-[var(--background-elevated)] border border-[var(--border)] text-[var(--foreground-muted)] hover:text-[var(--error)] hover:border-[var(--error)]/50'}`} title="Báo vắng">
+                        <X size={20} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="hidden md:block liquid-glass rounded-2xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="bg-[var(--background-muted)]/80 border-b border-[var(--border)]">
+                    <tr>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-[var(--foreground-muted)]">Tên Thánh + Họ và Tên</th>
+                      <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-[var(--foreground-muted)]">Ghi nhận</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border)]">
+                    {filteredMembers.map(m => {
+                      const record = attendanceData.find(d => d.date === selectedDate)?.records.find(r => r.memberId === m.id);
+                      const status = record?.status || 'ABSENT';
+                      const oneLineName = [m.saintName, m.name].filter(Boolean).join(' · ') || m.name;
+                      return (
+                        <tr key={m.id} className={`hover:bg-[var(--background-muted)]/50 transition-colors ${status !== 'ABSENT' ? 'bg-[var(--background-muted)]/30' : ''}`}>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${status === 'PRESENT' ? 'bg-[var(--secondary)] text-white' : status === 'LATE' ? 'bg-[var(--warning)] text-[var(--background)]' : 'bg-[var(--background-muted)] text-[var(--foreground-muted)] border border-[var(--border)]'}`}>
+                                {m.name[0]}
+                              </div>
+                              <span className="text-sm font-semibold text-[var(--foreground)] leading-tight truncate">{oneLineName}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'PRESENT')} className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl flex items-center justify-center transition-all ${status === 'PRESENT' ? 'bg-[var(--secondary)] text-white shadow-sm' : 'bg-[var(--background-elevated)] border border-[var(--border)] text-[var(--foreground-muted)] hover:text-[var(--secondary)] hover:border-[var(--secondary)]/50'}`} title="Hiện diện">
+                                <UserCheck size={20} />
+                              </button>
+                              <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'LATE')} className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl flex items-center justify-center transition-all ${status === 'LATE' ? 'bg-[var(--warning)] text-[var(--background)] shadow-sm' : 'bg-[var(--background-elevated)] border border-[var(--border)] text-[var(--foreground-muted)] hover:text-[var(--warning)] hover:border-[var(--warning)]/50'}`} title="Đến trễ">
+                                <Clock size={20} />
+                              </button>
+                              <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'ABSENT')} className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl flex items-center justify-center transition-all ${status === 'ABSENT' ? 'bg-[var(--error)] text-white shadow-sm' : 'bg-[var(--background-elevated)] border border-[var(--border)] text-[var(--foreground-muted)] hover:text-[var(--error)] hover:border-[var(--error)]/50'}`} title="Báo vắng">
+                                <X size={20} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
       )}
-      </div>
 
-      {/* Modal Thêm/Sửa Ca Viên */}
+      {/* Modal Thêm/Sửa ca viên */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-lg rounded-3xl my-8 relative z-[2001] shadow-2xl border border-slate-200/80 shrink-0 overflow-hidden">
-             <div className="h-1.5 w-full bg-amber-400 shrink-0" aria-hidden />
-             <div className="flex justify-between items-start p-8 sm:p-10 pb-0">
-               <div className="space-y-1">
-                 <h3 className="sacred-title text-xl font-bold text-slate-900 leading-none italic">{editingMember ? 'Cập nhật ca viên' : 'Thêm ca viên'}</h3>
-                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-2">Sổ Bộ Ca đoàn Thiên Thần</p>
-               </div>
-               <button onClick={() => setIsModalOpen(false)} className="p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all" aria-label="Đóng"><X size={22} /></button>
-             </div>
-             <form onSubmit={handleSubmit} className="space-y-8 px-8 sm:px-10 pb-8 sm:pb-10">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 italic">Tên Thánh</label>
-                    <input 
-                      type="text" 
-                      value={form.saintName} 
-                      onChange={e => setForm({...form, saintName: e.target.value})} 
-                      className="w-full px-5 py-3.5 rounded-2xl text-sm font-bold outline-none border border-slate-200/80 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all bg-slate-50/80" 
-                      placeholder="VD: Phêrô" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 italic">Họ và Tên</label>
-                    <input 
-                      type="text" 
-                      required 
-                      value={form.name} 
-                      onChange={e => setForm({...form, name: e.target.value})} 
-                      className="w-full px-5 py-3.5 rounded-2xl text-sm font-bold outline-none border border-slate-200/80 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all bg-slate-50/80" 
-                      placeholder="Nguyễn Văn A" 
-                    />
-                  </div>
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-black/30 backdrop-blur-sm">
+          <Card variant="glass" className="w-full max-w-lg rounded-2xl my-8 relative z-[2001] shadow-[var(--shadow-lg)] shrink-0 overflow-hidden">
+            <div className="flex justify-between items-start p-6 pb-0">
+              <div className="space-y-1">
+                <h3 className="sacred-title text-xl font-bold leading-none">{editingMember ? 'Cập nhật ca viên' : 'Thêm ca viên'}</h3>
+                <p className="section-label mt-1">Sổ Bộ Ban Điều Hành Ca Đoàn Thiên Thần</p>
+              </div>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="p-2 rounded-xl text-[var(--foreground-muted)] hover:text-[var(--foreground)] hover:bg-[var(--background-muted)] transition-all" aria-label="Đóng"><X size={22} /></button>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-6 p-6 pt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="section-label ml-0.5">Tên Thánh</label>
+                  <Input value={form.saintName ?? ''} onChange={e => setForm({ ...form, saintName: e.target.value })} placeholder="VD: Phêrô" />
                 </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 italic">Năm sinh</label>
-                    <input 
-                      type="text" 
-                      value={form.birthYear} 
-                      onChange={e => setForm({...form, birthYear: e.target.value})} 
-                      className="w-full px-5 py-3.5 rounded-2xl text-sm font-bold outline-none border border-slate-200/80 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all bg-slate-50/80" 
-                      placeholder="VD: 1995" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 italic">Giọng / Lớp</label>
-                    <input 
-                      type="text" 
-                      value={form.grade} 
-                      onChange={e => setForm({...form, grade: e.target.value})} 
-                      className="w-full px-5 py-3.5 rounded-2xl text-sm font-bold outline-none border border-slate-200/80 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all bg-slate-50/80" 
-                      placeholder="VD: Xưng Tội 1A" 
-                    />
-                  </div>
+                <div className="space-y-1.5">
+                  <label className="section-label ml-0.5">Họ và Tên</label>
+                  <Input required value={form.name ?? ''} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Nguyễn Văn A" />
                 </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 italic">Vai trò</label>
-                    <div className="relative">
-                      <select 
-                        value={form.role} 
-                        onChange={e => setForm({...form, role: e.target.value as any})} 
-                        className="w-full px-5 py-3.5 rounded-2xl text-sm font-bold outline-none appearance-none cursor-pointer border border-slate-200/80 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all bg-slate-50/80"
-                      >
-                        {['Thành viên', 'Ca trưởng', 'Ca phó', 'Thư ký', 'Thủ quỹ', 'Nhạc công'].map(r => <option key={r} value={r}>{r}</option>)}
-                      </select>
-                      <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 italic">Trạng thái</label>
-                    <div className="relative">
-                      <select 
-                        value={form.status} 
-                        onChange={e => setForm({...form, status: e.target.value as MemberStatus})} 
-                        className="w-full px-5 py-3.5 rounded-2xl text-sm font-bold outline-none appearance-none cursor-pointer border border-slate-200/80 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20 transition-all bg-slate-50/80"
-                      >
-                        <option value="ACTIVE">Hoạt động</option>
-                        <option value="ON_LEAVE">Tạm nghỉ</option>
-                        <option value="RETIRED">Nghỉ hẳn</option>
-                      </select>
-                      <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
-                    </div>
-                  </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="section-label ml-0.5">Năm sinh</label>
+                  <Input value={form.birthYear ?? ''} onChange={e => setForm({ ...form, birthYear: e.target.value })} placeholder="VD: 1995" />
                 </div>
-
-                <div className="pt-6 flex gap-4">
-                  <button 
-                    type="button" 
-                    onClick={() => setIsModalOpen(false)} 
-                    className="flex-1 py-4.5 text-slate-400 font-bold text-[11px] uppercase tracking-[0.3em] hover:text-slate-900 transition-all italic"
-                  >
-                    HỦY THAO TÁC
-                  </button>
-                  <button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-slate-800 active:scale-[0.98] transition-all shadow-lg disabled:opacity-60 disabled:pointer-events-none"
-                  >
-                    {isSubmitting ? 'Đang lưu...' : <><Save size={18} /> LƯU CA VIÊN</>}
-                  </button>
+                <div className="space-y-1.5">
+                  <label className="section-label ml-0.5">Giọng / Lớp</label>
+                  <Input value={form.grade ?? ''} onChange={e => setForm({ ...form, grade: e.target.value })} placeholder="VD: Xưng Tội 1A" />
                 </div>
-             </form>
-          </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="section-label ml-0.5">Vai trò</label>
+                  <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value as any })} className="w-full h-11 px-4 rounded-[var(--radius-md)] text-sm border border-[var(--border)] bg-[var(--background-muted)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 appearance-none cursor-pointer">
+                    {['Thành viên', 'Ca trưởng', 'Ca phó', 'Thư ký', 'Thủ quỹ', 'Nhạc công'].map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="section-label ml-0.5">Trạng thái</label>
+                  <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value as MemberStatus })} className="w-full h-11 px-4 rounded-[var(--radius-md)] text-sm border border-[var(--border)] bg-[var(--background-muted)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 appearance-none cursor-pointer">
+                    <option value="ACTIVE">Hoạt động</option>
+                    <option value="ON_LEAVE">Tạm nghỉ</option>
+                    <option value="RETIRED">Nghỉ hẳn</option>
+                  </select>
+                </div>
+              </div>
+              <div className="pt-4 flex gap-3">
+                <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)} className="flex-1">Hủy</Button>
+                <Button type="submit" disabled={isSubmitting} className="flex-[2] flex items-center justify-center gap-2">
+                  {isSubmitting ? 'Đang lưu...' : <><Save size={18} /> Lưu ca viên</>}
+                </Button>
+              </div>
+            </form>
+          </Card>
         </div>
       )}
 
       <ConfirmDialog
-        open={confirmDelete.open}
-        title="Xóa ca viên"
+        open={confirmDelete.open} title="Xóa ca viên"
         message={`Bạn có chắc muốn xóa ca viên "${confirmDelete.name}" khỏi danh sách? Hành động này không thể hoàn tác.`}
-        confirmLabel="Xóa"
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setConfirmDelete({ open: false, id: null, name: '' })}
-        danger
+        confirmLabel="Xóa" onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmDelete({ open: false, id: null, name: '' })} danger
       />
 
-      {/* Nút Thêm cố định góc phải */}
-      {activeTab === 'LIST' && (
-        <button
-          onClick={openAddModal}
-          className="fixed bottom-24 right-4 md:right-6 z-[90] w-14 h-14 rounded-2xl bg-slate-900 text-white shadow-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-transform hover:shadow-xl"
-          title="Thêm ca viên"
-        >
-          <UserPlus size={24} />
-        </button>
-      )}
     </div>
   );
 };

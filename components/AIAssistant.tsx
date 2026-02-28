@@ -1,26 +1,39 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-/* Added Globe to imports */
-import { Send, Sparkles, Loader2, Music, Calendar, FileText, Link2, ExternalLink, Globe } from 'lucide-react';
+import { Send, Sparkles, Loader2, CheckCircle2, Globe, ExternalLink } from 'lucide-react';
 import { getAIResponse } from '../services/geminiService';
+import type { ChatMessage } from '../services/geminiService';
+import { parseAICommand, describeCommand, CommandType } from '../services/aiCommandService';
+import { AppView } from '../types';
 import ReactMarkdown from 'react-markdown';
 
+export type OnExecuteCommand = (cmd: CommandType) => void;
+
 interface AIAssistantProps {
+  onNavigate?: (view: AppView) => void;
+  onExecuteCommand?: OnExecuteCommand;
   initialPrompt?: string | null;
   onPromptConsumed?: () => void;
 }
 
-const AIAssistant: React.FC<AIAssistantProps> = ({ initialPrompt, onPromptConsumed }) => {
+const WELCOME = `Chào anh chị! Tôi là **Trợ lý AI Ban Điều Hành Ca Đoàn Thiên Thần** — trả lời mọi câu hỏi như ChatGPT.
+
+- Hỏi **bất cứ điều gì**: kiến thức chung, phụng vụ, thánh ca, Công giáo, kỹ thuật...
+- **Ra lệnh**: *"Mở trang ngân quỹ"*, *"Chuyển sang Ca Viên"*, *"Thu 500k"*, *"Chi 200 nghìn"* — tôi sẽ thực hiện ngay.`;
+
+const AIAssistant: React.FC<AIAssistantProps> = ({
+  onNavigate,
+  onExecuteCommand,
+  initialPrompt,
+  onPromptConsumed,
+}) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<{ role: 'user' | 'ai'; content: string; sources?: any[] }[]>([
-    { role: 'ai', content: 'Chào anh chị! Tôi là Trợ lý AI, hỗ trợ thông tin phụng vụ và công tác ca đoàn. Anh chị có thể hỏi về lịch lễ, thánh ca hoặc gợi ý bài hát theo mùa.' }
+  const [messages, setMessages] = useState<{ role: 'user' | 'ai' | 'system'; content: string; sources?: any[] }[]>([
+    { role: 'ai', content: WELCOME },
   ]);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const scrollToBottom = () => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
   useEffect(() => {
     scrollToBottom();
@@ -31,20 +44,42 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ initialPrompt, onPromptConsum
     const query = params.get('q');
     if (query) {
       handleAutoSend(decodeURIComponent(query));
-      // Xóa query param để không bị gửi lại khi F5
       window.location.hash = '#assistant';
     }
   }, []);
 
+  useEffect(() => {
+    if (initialPrompt && initialPrompt.trim()) {
+      handleAutoSend(initialPrompt.trim());
+      onPromptConsumed?.();
+    }
+  }, [initialPrompt]);
+
+  const buildHistory = (): ChatMessage[] => {
+    return messages
+      .filter((m): m is { role: 'user' | 'ai'; content: string } => m.role === 'user' || m.role === 'ai')
+      .map((m) => ({ role: m.role, content: m.content }));
+  };
+
   const handleAutoSend = async (prompt: string) => {
-    setMessages(prev => [...prev, { role: 'user', content: prompt }]);
+    setMessages((prev) => [...prev, { role: 'user', content: prompt }]);
     setIsLoading(true);
-    const response = await getAIResponse(prompt);
-    setMessages(prev => [...prev, { 
-      role: 'ai', 
-      content: response.text,
-      sources: response.groundingMetadata?.groundingChunks 
-    }]);
+
+    const cmd = parseAICommand(prompt);
+    if (cmd) {
+      if (cmd.type === 'NAVIGATE' && onNavigate) onNavigate(cmd.view);
+      if (onExecuteCommand) onExecuteCommand(cmd);
+      setMessages((prev) => [...prev, { role: 'system', content: describeCommand(cmd) }]);
+      setIsLoading(false);
+      return;
+    }
+
+    const history = buildHistory();
+    const response = await getAIResponse(prompt, history);
+    setMessages((prev) => [
+      ...prev,
+      { role: 'ai', content: response.text, sources: response.groundingMetadata?.groundingChunks },
+    ]);
     setIsLoading(false);
   };
 
@@ -53,96 +88,116 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ initialPrompt, onPromptConsum
 
     const userMessage = input.trim();
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
-    const response = await getAIResponse(userMessage);
-    
-    setMessages(prev => [...prev, { 
-      role: 'ai', 
-      content: response.text,
-      sources: response.groundingMetadata?.groundingChunks 
-    }]);
+    const cmd = parseAICommand(userMessage);
+    if (cmd) {
+      if (cmd.type === 'NAVIGATE' && onNavigate) onNavigate(cmd.view);
+      if (onExecuteCommand) onExecuteCommand(cmd);
+      setMessages((prev) => [...prev, { role: 'system', content: describeCommand(cmd) }]);
+      setIsLoading(false);
+      return;
+    }
+
+    const history = buildHistory();
+    const response = await getAIResponse(userMessage, history);
+    setMessages((prev) => [
+      ...prev,
+      { role: 'ai', content: response.text, sources: response.groundingMetadata?.groundingChunks },
+    ]);
     setIsLoading(false);
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-11rem)] sm:h-[calc(100vh-10rem)] md:h-[calc(100vh-140px)] space-y-3 sm:space-y-4 animate-fade-in">
-      <div className="flex-1 overflow-auto px-2 sm:px-4 space-y-4 sm:space-y-6 scrollbar-hide pb-20 sm:pb-4">
+    <div className="flex flex-col h-full min-h-0 animate-fade-in">
+      <div className="page-header-2026 shrink-0 pb-4">
+        <h1 className="page-title">Trợ lý AI</h1>
+        <p className="page-subtitle">Hỏi gì cũng được · Ra lệnh mở trang, thu chi</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto min-h-0 space-y-6 pb-4">
         {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[90%] md:max-w-[75%] rounded-2xl px-5 py-4 shadow-sm border ${
-              msg.role === 'user' 
-                ? 'bg-slate-900 text-white rounded-tr-none border-slate-800' 
-                : 'glass-card rounded-tl-none border-slate-200'
-            }`}>
-              {msg.role === 'ai' && (
-                <div className="flex items-center gap-2 mb-3 text-amberGold border-b border-slate-100 pb-2">
-                  <Sparkles size={14} className="fill-amberGold" />
-                  <span className="text-[10px] font-black uppercase tracking-widest italic leading-none">Trợ Lý Phụng Vụ (AI Search)</span>
-                </div>
-              )}
-              <div className={`prose prose-sm max-w-none leading-relaxed ${msg.role === 'user' ? 'text-white' : 'text-slate-700'}`}>
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
+          <div
+            key={i}
+            className={`flex ${msg.role === 'user' ? 'justify-end' : msg.role === 'system' ? 'justify-center' : 'justify-start'}`}
+          >
+            {msg.role === 'system' ? (
+              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--success-bg)] border border-[var(--success)]/30 text-[var(--success)] text-xs font-medium max-w-[90%]">
+                <CheckCircle2 size={14} />
+                <span>{msg.content}</span>
               </div>
-              
-              {msg.sources && msg.sources.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Globe size={12} className="text-royalBlue" />
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Nguồn dữ liệu trực tuyến:</p>
+            ) : (
+              <div
+                className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-5 py-4 ${
+                  msg.role === 'user'
+                    ? 'bg-[var(--primary)] text-white rounded-br-md'
+                    : 'glass-card rounded-bl-md'
+                }`}
+              >
+                {msg.role === 'ai' && (
+                  <div className="flex items-center gap-2 mb-2 text-[var(--foreground-muted)] border-b border-[var(--border)] pb-2">
+                    <Sparkles size={14} className="text-[var(--primary)]" />
+                    <span className="text-xs font-semibold">Trợ lý AI</span>
                   </div>
-                  <div className="grid grid-cols-1 gap-2">
-                    {msg.sources.map((src, idx) => (
-                      src.web && (
-                        <a 
-                          key={idx} 
-                          href={src.web.uri} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between bg-slate-50/50 hover:bg-amber-50 px-4 py-2.5 rounded-xl border border-slate-200 transition-all text-[10px] font-bold text-slate-600 shadow-sm group/link"
-                        >
-                          <div className="flex items-center gap-3 truncate">
-                            <Link2 size={12} className="text-slate-400 group-hover/link:text-amberGold" />
-                            <span className="truncate">{src.web.title || "Tài liệu tham khảo"}</span>
-                          </div>
-                          <ExternalLink size={10} className="text-slate-300" />
-                        </a>
-                      )
-                    ))}
-                  </div>
+                )}
+                <div className={`prose prose-sm max-w-none leading-relaxed ${msg.role === 'user' ? 'prose-invert text-white' : 'text-[var(--foreground)]'}`}>
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
                 </div>
-              )}
-            </div>
+                {msg.sources && msg.sources.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Globe size={12} className="text-[var(--foreground-muted)]" />
+                      <span className="text-xs font-semibold text-[var(--foreground-muted)]">Nguồn tham khảo</span>
+                    </div>
+                    <div className="space-y-2">
+                      {msg.sources.map(
+                        (src: any, idx: number) =>
+                          src.web && (
+                            <a
+                              key={idx}
+                              href={src.web.uri}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[var(--background-muted)] hover:bg-[var(--background-elevated)] border border-[var(--border)] text-xs font-medium text-[var(--foreground-muted)]"
+                            >
+                              <span className="truncate flex-1">{src.web.title || 'Tài liệu'}</span>
+                              <ExternalLink size={12} className="text-[var(--foreground-muted)] shrink-0" />
+                            </a>
+                          )
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ))}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="glass-card rounded-2xl rounded-tl-none px-5 py-4 flex items-center gap-3 text-slate-400 border-slate-200">
-              <Loader2 className="animate-spin text-amberGold" size={18} />
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-widest italic">Đang suy ngẫm & tra cứu...</span>
-                <span className="text-[7px] text-slate-300 uppercase tracking-widest mt-0.5">Sử dụng Google Search Grounding</span>
-              </div>
+            <div className="rounded-2xl rounded-bl-md px-5 py-4 glass-card flex items-center gap-3">
+              <Loader2 className="animate-spin text-[var(--primary)]" size={20} />
+              <span className="text-sm text-[var(--foreground-muted)]">Đang suy nghĩ...</span>
             </div>
           </div>
         )}
         <div ref={chatEndRef} />
       </div>
 
-      <div className="glass-card p-4 rounded-xl border-slate-200 shadow-lg bg-white/80">
-        <div className="flex gap-2 mb-3 overflow-x-auto scrollbar-hide">
-           {[ "Thông tin Phụng vụ 2026", "Lễ kính đặc biệt tháng này", "Bài hát gợi ý Mùa Chay", "Lịch Ordo mới nhất"].map(label => (
-             <button 
-               key={label}
-               onClick={() => setInput(prev => prev + label)}
-               className="px-3 py-1.5 rounded-lg border border-slate-100 bg-white text-[10px] font-bold text-slate-500 hover:text-amberGold transition-all whitespace-nowrap shadow-sm"
-             >
-               {label}
-             </button>
-           ))}
+      <div className="shrink-0 pt-2">
+        <div className="flex gap-2 mb-3 overflow-x-auto scrollbar-hide pb-1">
+          {['Mở trang ngân quỹ', 'Chuyển sang Ca Viên', 'Thu 500k', 'Lịch phụng vụ tháng này', 'Giải thích RLS là gì'].map((label) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setInput((prev) => (prev ? prev + ' ' : '') + label)}
+              className="px-3 py-2 rounded-full border border-[var(--border)] bg-[var(--background-muted)] text-[var(--foreground-muted)] text-xs font-medium whitespace-nowrap hover:bg-[var(--primary-muted)] hover:border-[var(--primary)]/30 transition-colors"
+            >
+              {label}
+            </button>
+          ))}
         </div>
-        <div className="relative">
+        <div className="flex gap-2 rounded-2xl border border-[var(--border)] bg-[var(--background-muted)] backdrop-blur-sm p-2 shadow-[var(--shadow-xs)] focus-within:ring-2 focus-within:ring-[var(--primary)]/20 focus-within:border-[var(--primary)]">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -152,19 +207,18 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ initialPrompt, onPromptConsum
                 handleSend();
               }
             }}
-            placeholder="Trao đổi cùng Trợ lý AI Search..."
-            className="w-full pl-4 pr-14 py-3 bg-white border border-slate-200 rounded-lg outline-none focus:border-amberGold transition-all resize-none h-16 text-[13px] font-medium"
+            placeholder="Hỏi bất cứ điều gì hoặc ra lệnh (vd: Mở Ca Viên, Thu 500k)..."
+            className="flex-1 min-h-[48px] max-h-32 px-4 py-3 rounded-xl resize-none text-sm text-[var(--foreground)] placeholder:text-[var(--foreground-subtle)] bg-[var(--background)]/50 border-0 focus:ring-0 focus:outline-none"
+            rows={2}
           />
           <button
+            type="button"
             onClick={handleSend}
             disabled={!input.trim() || isLoading}
-            className={`absolute right-2 bottom-2 p-2.5 rounded-lg transition-all ${
-              !input.trim() || isLoading 
-                ? 'bg-slate-100 text-slate-300' 
-                : 'active-pill shadow-sm active:scale-95 bg-slate-900 text-white'
-            }`}
+            className="shrink-0 w-12 h-12 rounded-xl bg-[var(--primary)] text-white flex items-center justify-center hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            aria-label="Gửi"
           >
-            <Send size={18} />
+            <Send size={20} />
           </button>
         </div>
       </div>

@@ -8,49 +8,25 @@ type Month = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
 const YEAR = 2026;
 
 const MONTH_LABELS_VI: Record<Month, string> = {
-  1: 'Tháng Một',
-  2: 'Tháng Hai',
-  3: 'Tháng Ba',
-  4: 'Tháng Tư',
-  5: 'Tháng Năm',
-  6: 'Tháng Sáu',
-  7: 'Tháng Bảy',
-  8: 'Tháng Tám',
-  9: 'Tháng Chín',
-  10: 'Tháng Mười',
-  11: 'Tháng Mười Một',
-  12: 'Tháng Mười Hai',
+  1: 'Tháng Một', 2: 'Tháng Hai', 3: 'Tháng Ba', 4: 'Tháng Tư',
+  5: 'Tháng Năm', 6: 'Tháng Sáu', 7: 'Tháng Bảy', 8: 'Tháng Tám',
+  9: 'Tháng Chín', 10: 'Tháng Mười', 11: 'Tháng Mười Một', 12: 'Tháng Mười Hai',
 };
 
 const WEEKDAY_LABELS = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 
 const RANK_LABELS_VI: Record<LiturgicalRank, string> = {
-  SOLEMNITY: 'Lễ Trọng',
-  FEAST: 'Lễ Kính',
-  SUNDAY: 'Chúa Nhật',
-  OPTIONAL: 'Ngày thường',
+  SOLEMNITY: 'Lễ Trọng', FEAST: 'Lễ Kính', SUNDAY: 'Chúa Nhật', OPTIONAL: 'Ngày thường',
 };
 
 const COLOR_LABELS_VI: Record<LiturgicalColor, string> = {
-  WHITE: 'Trắng',
-  RED: 'Đỏ',
-  GREEN: 'Xanh lá',
-  VIOLET: 'Tím',
-  GOLD: 'Vàng',
-  ROSE: 'Hồng',
+  WHITE: 'Trắng', RED: 'Đỏ', GREEN: 'Xanh lá', VIOLET: 'Tím', GOLD: 'Vàng', ROSE: 'Hồng',
 };
 
-/** Màu áo lễ (vestment) — dùng cho chấm tròn (viền nhạt để thấy trên nền sáng) */
 const VESTMENT_COLORS: Record<LiturgicalColor, string> = {
-  WHITE: '#e2e8f0',
-  RED: '#dc2626',
-  GREEN: '#059669',
-  VIOLET: '#7c3aed',
-  GOLD: '#f59e0b',
-  ROSE: '#ec4899',
+  WHITE: '#f8fafc', RED: '#f87171', GREEN: '#86efac', VIOLET: '#c4b5fd', GOLD: '#fcd34d', ROSE: '#fb7185',
 };
 
-/** Ngày theo giờ địa phương YYYY-MM-DD — nhất quán với ordoService */
 const toDateKey = (d: Date): string => {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -59,13 +35,11 @@ const toDateKey = (d: Date): string => {
 };
 const pad2 = (n: number) => n.toString().padStart(2, '0');
 
-/** Lưới tháng: luôn 6 tuần (42 ô) để bố cục nhất quán, Chủ Nhật = cột 0 */
 const buildMonthGrid = (year: number, month: Month): Array<{ date: Date; inMonth: boolean }> => {
   const first = new Date(year, month - 1, 1);
   const startDay = first.getDay();
   const daysInMonth = new Date(year, month, 0).getDate();
   const cells: Array<{ date: Date; inMonth: boolean }> = [];
-
   for (let i = 0; i < startDay; i++) {
     const d = new Date(year, month - 1, 1 - (startDay - i));
     cells.push({ date: d, inMonth: false });
@@ -98,9 +72,7 @@ const LiturgyPage: React.FC = () => {
   const ordoForMonth = useMemo(() => getOrdoForMonth(selectedMonth, YEAR), [selectedMonth]);
   const ordoByDate = useMemo(() => {
     const map: Record<string, OrdoEvent> = {};
-    ordoForMonth.forEach((e) => {
-      map[e.date] = e;
-    });
+    ordoForMonth.forEach((e) => { map[e.date] = e; });
     return map;
   }, [ordoForMonth]);
 
@@ -122,162 +94,187 @@ const LiturgyPage: React.FC = () => {
   }, [selectedDateKey, selectedMonth]);
 
   return (
-    <div className="h-full min-h-[calc(100vh-5rem)] flex flex-col overflow-hidden bg-gradient-to-b from-slate-50 to-slate-100/80 pb-20 lg:pb-0">
-      {/* Header */}
-      <div className="shrink-0 flex flex-wrap items-center justify-between gap-2 sm:gap-4 px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-white border-b border-slate-200/80 shadow-sm">
-        <div className="flex items-baseline gap-2 sm:gap-4 min-w-0">
-          <div className="relative">
-            <h1 className="sacred-title text-lg sm:text-xl md:text-2xl font-bold text-slate-900 italic">Phụng vụ</h1>
-            <span className="absolute left-0 -bottom-1 w-10 sm:w-12 h-1 bg-amber-400/80 rounded-full" aria-hidden />
+    <div className="h-full flex flex-col overflow-hidden animate-fade-in">
+      <div className="page-header-2026 shrink-0 mb-4">
+        <div className="page-header-row">
+          <div>
+            <h1 className="page-title">Phụng vụ</h1>
+            <p className="page-subtitle">Lịch Công giáo {YEAR} — Năm A</p>
           </div>
-          <p className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest hidden sm:block truncate">
-            Lịch Công giáo {YEAR} — Năm A
-          </p>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="flex items-center rounded-xl sm:rounded-2xl bg-slate-100 border border-slate-200/80 overflow-hidden">
-            <button onClick={goPrevMonth} className="p-2 sm:p-2.5 hover:bg-white/80 transition-colors touch-manipulation" aria-label="Tháng trước">
-              <ChevronLeft size={18} className="sm:w-5 sm:h-5 text-slate-600" />
+          <div className="page-actions-2026 flex items-center gap-2 flex-wrap">
+          <div className="flex items-center rounded-xl border border-[var(--border)] bg-[var(--background-muted)] overflow-hidden shadow-[var(--shadow-xs)]">
+            <button type="button" onClick={goPrevMonth} className="p-2.5 rounded-l-xl hover:bg-[var(--background-elevated)] transition-colors min-h-[44px]" aria-label="Tháng trước">
+              <ChevronLeft size={18} className="text-[var(--foreground-muted)]" />
             </button>
-            <span className="text-xs sm:text-sm font-bold text-slate-900 min-w-[100px] sm:min-w-[130px] text-center px-1 sm:px-2">
+            <span className="text-sm font-semibold min-w-[100px] text-center px-3 text-[var(--foreground)]">
               {MONTH_LABELS_VI[selectedMonth]} {YEAR}
             </span>
-            <button onClick={goNextMonth} className="p-2 sm:p-2.5 hover:bg-white/80 transition-colors touch-manipulation" aria-label="Tháng sau">
-              <ChevronRight size={18} className="sm:w-5 sm:h-5 text-slate-600" />
+            <button type="button" onClick={goNextMonth} className="p-2.5 rounded-r-xl hover:bg-[var(--background-elevated)] transition-colors min-h-[44px]" aria-label="Tháng sau">
+              <ChevronRight size={18} className="text-[var(--foreground-muted)]" />
             </button>
           </div>
           <button
+            type="button"
             onClick={() => setSelectedDateKey(todayKey.startsWith(`${YEAR}-`) ? todayKey : `${YEAR}-01-01`)}
-            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-slate-900 text-white text-[10px] sm:text-xs font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors shadow-md touch-manipulation"
+            className="btn-primary flex items-center gap-2"
             title="Về ngày hôm nay"
           >
-            <CalendarDays size={16} className="sm:w-[18px] sm:h-[18px]" /> Hôm nay
+            <CalendarDays size={16} /> Hôm nay
           </button>
         </div>
+        </div>
       </div>
-      <p className="text-slate-500 text-[10px] sm:text-xs font-bold uppercase tracking-widest mt-1.5 px-3 sm:px-4 sm:hidden">
-        Lịch Công giáo {YEAR} — Năm A
-      </p>
 
-      {/* Nội dung chính */}
-      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-3 sm:gap-5 p-3 sm:p-4 md:p-6 overflow-auto">
-        {/* Lịch tháng - card */}
-        <div className="flex-1 min-h-0 flex flex-col bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
-          <div className="grid grid-cols-7 gap-px bg-slate-100 border-b border-slate-200/80 shrink-0">
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-5 overflow-auto">
+        <div className="glass-card flex-1 min-h-0 flex flex-col rounded-2xl overflow-hidden">
+          <div className="grid grid-cols-7 gap-px bg-[var(--border)] shrink-0">
             {WEEKDAY_LABELS.map((w, i) => (
-              <div key={w} className="bg-slate-50/80 text-center text-xs font-bold uppercase tracking-widest text-slate-500 py-3">
+              <div key={w} className="bg-[var(--background-muted)] text-center text-xs font-semibold uppercase tracking-wide text-[var(--foreground-muted)] py-3">
                 {i === 0 ? 'CN' : `T${i + 1}`}
               </div>
             ))}
           </div>
           <div className="flex-1 p-2 sm:p-3 md:p-4 min-h-[200px] sm:min-h-[240px]">
-          <div className="grid grid-cols-7 grid-rows-6 gap-1.5 sm:gap-2 h-full">
-            {monthGrid.map(({ date, inMonth }) => {
-              const key = toDateKey(date);
-              const isToday = key === todayKey;
-              const isSelected = key === selectedDateKey;
-              const event = ordoByDate[key];
-              const title = event?.massName ?? '';
-              const rank = event?.rank;
-              const rankLabel = rank ? RANK_LABELS_VI[rank] : '';
-              const colorLabel = event?.liturgicalColor ? COLOR_LABELS_VI[event.liturgicalColor] : '';
-              const vestmentColor = event?.liturgicalColor ? VESTMENT_COLORS[event.liturgicalColor] : null;
-              const isSunday = rank === 'SUNDAY';
-              const isSolemnity = rank === 'SOLEMNITY';
-              const isFeast = rank === 'FEAST';
+            <div className="grid grid-cols-7 grid-rows-6 gap-1.5 sm:gap-2 h-full">
+              {monthGrid.map(({ date, inMonth }) => {
+                const key = toDateKey(date);
+                const isToday = key === todayKey;
+                const isSelected = key === selectedDateKey;
+                const event = ordoByDate[key];
+                const title = event?.massName ?? '';
+                const rank = event?.rank;
+                const rankLabel = rank ? RANK_LABELS_VI[rank] : '';
+                const colorLabel = event?.liturgicalColor ? COLOR_LABELS_VI[event.liturgicalColor] : '';
+                const vestmentColor = event?.liturgicalColor ? VESTMENT_COLORS[event.liturgicalColor] : null;
+                const isSunday = rank === 'SUNDAY';
+                const isSolemnity = rank === 'SOLEMNITY';
+                const isFeast = rank === 'FEAST';
 
-              return (
-                <button
-                  key={key}
-                  ref={isSelected ? selectedDayRef : undefined}
-                  onClick={() => setSelectedDateKey(key)}
-                  className={`rounded-2xl border text-left p-2 sm:p-2.5 transition-all flex flex-col min-h-0 ${
-                    inMonth ? 'bg-white' : 'bg-slate-50/70'
-                  } ${
-                    isSelected
-                      ? 'border-slate-800 shadow-lg ring-2 ring-amber-400/50'
-                      : isToday
-                        ? 'border-amber-400 shadow-md'
-                        : 'border-slate-200/80 hover:shadow-md hover:border-slate-300'
-                  } ${
-                    inMonth && isSolemnity ? 'bg-amber-50/70 border-amber-200/80' : ''
-                  } ${
-                    inMonth && isFeast ? 'bg-sky-50/60 border-sky-200/60' : ''
-                  } ${
-                    inMonth && isSunday && !isSolemnity && !isFeast ? 'bg-slate-50/80 border-slate-200/70' : ''
-                  }`}
-                  title={[key, title, rankLabel, colorLabel].filter(Boolean).join(' • ')}
-                >
-                  <div className="flex items-center justify-between gap-0.5 shrink-0">
-                    <span className={`text-xs sm:text-sm font-black ${inMonth ? 'text-slate-900' : 'text-slate-400'}`}>
-                      {date.getDate()}
-                    </span>
-                    <div className="flex items-center gap-1 shrink-0">
-                      {vestmentColor && (
-                        <span
-                          className="w-2 h-2 rounded-full shrink-0 border border-slate-300/70 shadow-sm"
-                          style={{ backgroundColor: vestmentColor }}
-                          title={`Màu áo lễ: ${colorLabel}`}
-                        />
-                      )}
+                let cellBg = inMonth ? 'bg-[var(--background-elevated)]' : 'bg-[var(--background-muted)]/70';
+                if (inMonth && vestmentColor && event?.liturgicalColor !== 'WHITE') {
+                  cellBg = '';
+                } else if (inMonth && isSolemnity) {
+                  cellBg = 'bg-[var(--warning-bg)]/70';
+                } else if (inMonth && isFeast) {
+                  cellBg = 'bg-[var(--primary-muted)]/60';
+                } else if (inMonth && isSunday && !isSolemnity && !isFeast) {
+                  cellBg = 'bg-[var(--background-muted)]/80';
+                }
+
+                return (
+                  <button
+                    type="button"
+                    key={key}
+                    ref={isSelected ? selectedDayRef : undefined}
+                    onClick={() => setSelectedDateKey(key)}
+                    className={`rounded-xl border text-left p-2 sm:p-2.5 transition-all duration-200 flex flex-col min-h-0 hover:shadow-[var(--shadow-sm)] ${
+                      isSelected
+                        ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/20 bg-[var(--primary-muted)] shadow-[var(--shadow-xs)]'
+                        : isToday
+                        ? 'border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)] shadow-[var(--shadow-xs)]'
+                        : `border-[var(--border)] hover:border-[var(--border-strong)] hover:bg-[var(--background-muted)]/50 ${cellBg}`
+                    }`}
+                    style={
+                      inMonth && vestmentColor && event?.liturgicalColor !== 'WHITE' && !isSelected && !isToday
+                        ? { backgroundColor: vestmentColor, opacity: 0.85, borderColor: 'transparent' }
+                        : undefined
+                    }
+                    title={[key, title, rankLabel, colorLabel].filter(Boolean).join(' · ')}
+                  >
+                    <div className="flex items-center justify-between gap-0.5 shrink-0">
+                      <span className={`text-xs sm:text-sm font-bold ${inMonth && !isToday ? 'text-[var(--foreground)]' : isToday ? 'text-[var(--background)]' : 'text-[var(--foreground-muted)]'}`}>
+                        {date.getDate()}
+                      </span>
                       {isToday && (
-                        <span className="text-[9px] font-bold uppercase text-amber-700 bg-amber-50 border border-amber-200/70 px-1.5 py-0.5 rounded-full">
-                          Hôm nay
+                        <span className="text-[10px] sm:text-[9px] font-bold uppercase text-[var(--foreground)] bg-[var(--background)]/90 px-1.5 py-0.5 rounded-full">
+                          Nay
                         </span>
                       )}
                     </div>
-                  </div>
-                  <div className="mt-1 overflow-hidden flex-1 min-h-0">
-                    <p className={`text-[10px] sm:text-xs font-bold leading-tight truncate ${title ? 'text-slate-700' : 'text-slate-400'}`}>
-                      {title || (inMonth ? 'Thường' : '')}
-                    </p>
-                    {rankLabel && (
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 truncate">{rankLabel}</p>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                    <div className="mt-1 overflow-hidden flex-1 min-h-0">
+                      <p className={`text-[10px] sm:text-xs font-semibold leading-tight truncate ${title ? (isToday ? 'text-[var(--background)]/90' : 'text-[var(--foreground)]') : 'text-[var(--foreground-muted)]'}`}>
+                        {title || (inMonth ? 'Thường' : '')}
+                      </p>
+                      {rankLabel && (
+                        <p className={`text-[10px] sm:text-[9px] font-semibold uppercase tracking-wider truncate ${isToday ? 'text-[var(--background)]/70' : 'text-[var(--foreground-muted)]'}`}>{rankLabel}</p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Chi tiết ngày */}
-        <div className="shrink-0 w-full lg:w-[22rem] xl:w-96 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden h-fit">
-          <div className="border-l-4 border-l-amber-400 bg-slate-50/50 px-5 py-4">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-0.5">Chi tiết ngày</p>
-            <p className="text-sm font-bold text-slate-900">{selectedDateKey}</p>
+        <div className="glass-card shrink-0 w-full lg:w-[22rem] xl:w-96 rounded-2xl overflow-hidden h-fit">
+          <div className="border-l-4 border-l-[var(--foreground)] bg-[var(--background-muted)] px-5 py-4">
+            <p className="section-label mb-0.5">Chi tiết ngày</p>
+            <p className="text-sm font-bold text-[var(--foreground)]">{selectedDateKey}</p>
           </div>
-          <div className="p-5">
-          {!selectedEvent ? (
-            <p className="text-xs text-slate-500">Chọn một ngày trên lịch.</p>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-base font-bold text-slate-900 leading-snug">{selectedEvent.massName}</p>
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600 bg-slate-100 border border-slate-200/70 px-2.5 py-1 rounded-full">
-                  {RANK_LABELS_VI[selectedEvent.rank]}
-                </span>
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-600 bg-slate-100 border border-slate-200/70 px-2.5 py-1 rounded-full">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full border border-slate-300/70 shadow-sm"
-                    style={{ backgroundColor: VESTMENT_COLORS[selectedEvent.liturgicalColor] }}
-                  />
-                  Màu áo lễ: {COLOR_LABELS_VI[selectedEvent.liturgicalColor]}
-                </span>
-                {selectedEvent.note && (
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full">
-                    {selectedEvent.note}
+          <div className="p-6">
+            {!selectedEvent ? (
+              <p className="text-sm text-[var(--foreground-muted)]">Chọn một ngày trên lịch.</p>
+            ) : (
+              <div className="space-y-5">
+                <p className="text-base font-bold text-[var(--foreground)] leading-snug sacred-title">{selectedEvent.massName}</p>
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-[var(--foreground-muted)] bg-[var(--background-muted)] px-3 py-1.5 rounded-full border border-[var(--border)]">
+                    {RANK_LABELS_VI[selectedEvent.rank]}
                   </span>
-                )}
-                {selectedEvent.isObligatory && (
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 bg-amber-50 border border-amber-200/70 px-2.5 py-1 rounded-full">
-                    Lễ buộc
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--foreground-muted)] bg-[var(--background-muted)] px-3 py-1.5 rounded-full border border-[var(--border)]">
+                    <span className="w-3 h-3 rounded-full border border-[var(--border)]" style={{ backgroundColor: VESTMENT_COLORS[selectedEvent.liturgicalColor] }} />
+                    {COLOR_LABELS_VI[selectedEvent.liturgicalColor]}
                   </span>
-                )}
+                  {selectedEvent.note && (
+                    <span className="text-xs font-semibold uppercase tracking-wide text-[var(--foreground-muted)] bg-[var(--background-muted)] px-3 py-1.5 rounded-full">
+                      {selectedEvent.note}
+                    </span>
+                  )}
+                  {selectedEvent.isObligatory && (
+                    <span className="text-xs font-semibold uppercase tracking-wide text-[var(--warning)] bg-[var(--warning-bg)] px-3 py-1.5 rounded-full border border-[var(--warning)]/30">
+                      Lễ buộc
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full bg-[var(--error)] shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="section-label">Bậc lễ</p>
+                      <p className="text-sm font-semibold text-[var(--foreground)]">{RANK_LABELS_VI[selectedEvent.rank]}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full bg-[var(--warning)] shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="section-label">Màu áo lễ</p>
+                      <p className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
+                        {COLOR_LABELS_VI[selectedEvent.liturgicalColor]}
+                        <span className="w-4 h-4 rounded-md border border-[var(--border)]" style={{ backgroundColor: VESTMENT_COLORS[selectedEvent.liturgicalColor] }} />
+                      </p>
+                    </div>
+                  </div>
+                  {selectedEvent.isObligatory && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-[var(--primary)] shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="section-label">Buộc</p>
+                        <p className="text-sm font-semibold text-[var(--warning)]">Lễ buộc — Nghỉ việc xác</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedEvent.note && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-[var(--secondary)] shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="section-label">Ghi chú</p>
+                        <p className="text-sm font-semibold text-[var(--foreground)]">{selectedEvent.note}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
           </div>
         </div>
       </div>

@@ -1,53 +1,73 @@
-
 import { GoogleGenAI } from "@google/genai";
 
-const SYSTEM_INSTRUCTION = `Bạn là TRỢ LÝ AI CA ĐOÀN THIÊN THẦN v2026.
-Nhiệm vụ của bạn là hỗ trợ Ban Điều Hành trong công tác Phụng vụ và kỹ thuật quản lý ứng dụng.
+export type ChatMessage = { role: 'user' | 'ai'; content: string };
 
-QUY TẮC PHỤNG VỤ:
-1. Phong cách trang trọng, khiêm nhường, đậm chất Công giáo Việt Nam.
-2. Kết thúc bằng 'Mọi sự vì Vinh Danh Thiên Chúa! (AMDG)'.
+const SYSTEM_INSTRUCTION = `Bạn là TRỢ LÝ AI BAN ĐIỀU HÀNH CA ĐOÀN THIÊN THẦN — một trợ lý thông minh, hữu ích và lịch sự.
+Bạn có thể trả lời mọi câu hỏi (kiến thức chung, phụng vụ, thánh ca, Công giáo, kỹ thuật, v.v.) giống như ChatGPT.
 
-QUY TẮC KỸ THUẬT (SUPABASE/RLS):
-1. Nếu người dùng hỏi về lỗi 'RLS' hoặc 'không lưu được Cloud', hãy cung cấp câu lệnh SQL sau:
-   'BEGIN;
-    ALTER TABLE members DISABLE ROW LEVEL SECURITY;
-    ALTER TABLE schedule_events DISABLE ROW LEVEL SECURITY;
-    ALTER TABLE songs DISABLE ROW LEVEL SECURITY;
-    ALTER TABLE transactions DISABLE ROW LEVEL SECURITY;
-    ALTER TABLE attendance DISABLE ROW LEVEL SECURITY;
-    COMMIT;'
-2. Giải thích rằng RLS là lớp bảo mật, việc tắt nó đi hoặc thêm Policy là cần thiết để ứng dụng hoạt động.`;
+NHIỆM VỤ:
+- Trả lời chính xác, rõ ràng, có thể tra cứu thông tin mới nhất khi cần.
+- Hỗ trợ Ban Điều Hành: lịch phụng vụ, gợi ý thánh ca theo mùa, giải thích nghi thức.
+- Phong cách: trang trọng, khiêm nhường, đậm chất Công giáo Việt Nam. Có thể kết thúc bằng "Mọi sự vì Vinh Danh Thiên Chúa! (AMDG)" khi phù hợp.
+
+KỸ THUẬT (Supabase/RLS):
+- Nếu người dùng hỏi về lỗi RLS hoặc "không lưu được Cloud", gợi ý chạy SQL tắt RLS cho các bảng: members, schedule_events, songs, transactions, attendance (DISABLE ROW LEVEL SECURITY).
+- Giải thích ngắn gọn RLS và cách khắc phục.`;
 
 const getApiKey = () =>
   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_KEY) ||
-  (typeof process !== 'undefined' && process.env?.API_KEY) ||
+  (typeof import.meta !== 'undefined' && (import.meta as any).env?.GEMINI_API_KEY) ||
   '';
 
-export const getAIResponse = async (prompt: string) => {
+export const getAIResponseWithHistory = async (messages: ChatMessage[]): Promise<{
+  text: string;
+  groundingMetadata?: any;
+}> => {
   const apiKey = getApiKey();
+  if (!apiKey) {
+    return {
+      text: 'Chưa cấu hình API Key. Vui lòng thêm **VITE_API_KEY** vào file `.env.local`, sau đó khởi động lại.\n\nLấy key miễn phí tại: https://aistudio.google.com/apikey',
+      groundingMetadata: undefined,
+    };
+  }
+
   const ai = new GoogleGenAI({ apiKey });
-  
+
+  const contents = messages.map((m) => ({
+    role: m.role === 'ai' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
+
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
+      model: 'gemini-2.0-flash',
+      contents,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         temperature: 0.7,
         tools: [{ googleSearch: {} }],
       },
     });
-    
+
     return {
-      text: response.text || "Xin lỗi anh chị, em đang gặp chút gián đoạn. Xin thử lại sau.",
+      text: response.text || "Xin lỗi, tôi đang gặp chút gián đoạn. Xin thử lại sau.",
       groundingMetadata: response.candidates?.[0]?.groundingMetadata,
     };
   } catch (error) {
     console.error("Gemini Error:", error);
-    return { 
-      text: "Có lỗi xảy ra khi kết nối. Xin anh chị hiệp thông thông cảm.",
-      groundingMetadata: undefined 
+    return {
+      text: "Có lỗi kết nối tới AI. Xin kiểm tra mạng hoặc API Key và thử lại.",
+      groundingMetadata: undefined,
     };
   }
+};
+
+export const getAIResponse = async (
+  prompt: string,
+  history?: ChatMessage[]
+): Promise<{ text: string; groundingMetadata?: any }> => {
+  const messages: ChatMessage[] = history
+    ? [...history, { role: 'user' as const, content: prompt }]
+    : [{ role: 'user', content: prompt }];
+  return getAIResponseWithHistory(messages);
 };
