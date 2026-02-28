@@ -338,29 +338,35 @@ const MemberManagement: React.FC = () => {
                 const record = attendanceData.find(d => d.date === selectedDate)?.records.find(r => r.memberId === m.id);
                 const status = record?.status || 'ABSENT';
                 return (
-                  <div key={m.id} className={`flex items-center gap-2.5 py-2.5 px-3 rounded-xl border transition-all ${status === 'PRESENT' ? 'bg-[var(--success-bg)]/30 border-[var(--success)]/20' : status === 'LATE' ? 'bg-[var(--warning-bg)]/30 border-[var(--warning)]/20' : 'bg-[var(--background-elevated)] border-[var(--border)]'}`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${status === 'PRESENT' ? 'bg-[var(--success)] text-white' : status === 'LATE' ? 'bg-[var(--warning)] text-white' : 'bg-[var(--background-muted)] text-[var(--foreground-muted)]'}`}>
-                      {idx + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1">
-                        {m.saintName && <span className="text-[10px] font-semibold text-[var(--primary)]">{m.saintName}</span>}
-                        <span className="text-sm font-semibold text-[var(--foreground)] truncate">{m.name}</span>
+                  <div key={m.id} className={`rounded-xl border px-3 py-2.5 transition-all ${status === 'PRESENT' ? 'bg-[var(--success-bg)]/30 border-[var(--success)]/20' : status === 'LATE' ? 'bg-[var(--warning-bg)]/30 border-[var(--warning)]/20' : 'bg-[var(--background-elevated)] border-[var(--border)]'}`}>
+                    {/* Dòng 1: STT + Tên đầy đủ */}
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-7 h-7 rounded-md flex items-center justify-center text-[11px] font-bold shrink-0 ${status === 'PRESENT' ? 'bg-[var(--success)] text-white' : status === 'LATE' ? 'bg-[var(--warning)] text-white' : 'bg-[var(--background-muted)] text-[var(--foreground-muted)]'}`}>
+                        {idx + 1}
                       </div>
-                      <span className={`text-[10px] font-medium ${status === 'PRESENT' ? 'text-[var(--success)]' : status === 'LATE' ? 'text-[var(--warning)]' : 'text-[var(--foreground-muted)]'}`}>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[var(--foreground)] leading-tight">
+                          {m.saintName && <span className="text-[var(--primary)] mr-1">{m.saintName}</span>}
+                          {m.name}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Dòng 2: Trạng thái + 3 nút */}
+                    <div className="flex items-center justify-between mt-2 pl-[38px]">
+                      <span className={`text-xs font-medium ${status === 'PRESENT' ? 'text-[var(--success)]' : status === 'LATE' ? 'text-[var(--warning)]' : 'text-[var(--foreground-muted)]'}`}>
                         {status === 'PRESENT' ? 'Hiện diện' : status === 'LATE' ? 'Đến trễ' : 'Vắng mặt'}
                       </span>
-                    </div>
-                    <div className="flex gap-1.5 shrink-0">
-                      <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'PRESENT')} className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${status === 'PRESENT' ? 'bg-[var(--success)] text-white shadow-sm' : 'bg-[var(--background-muted)] border border-[var(--border)] text-[var(--foreground-muted)]'}`} title="Hiện diện">
-                        <UserCheck size={16} />
-                      </button>
-                      <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'LATE')} className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${status === 'LATE' ? 'bg-[var(--warning)] text-white shadow-sm' : 'bg-[var(--background-muted)] border border-[var(--border)] text-[var(--foreground-muted)]'}`} title="Đến trễ">
-                        <Clock size={16} />
-                      </button>
-                      <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'ABSENT')} className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${status === 'ABSENT' ? 'bg-[var(--error)] text-white shadow-sm' : 'bg-[var(--background-muted)] border border-[var(--border)] text-[var(--foreground-muted)]'}`} title="Vắng">
-                        <X size={16} />
-                      </button>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'PRESENT')} className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${status === 'PRESENT' ? 'bg-[var(--success)] text-white shadow-sm' : 'bg-[var(--background-muted)] border border-[var(--border)] text-[var(--foreground-muted)]'}`} title="Hiện diện">
+                          <UserCheck size={16} />
+                        </button>
+                        <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'LATE')} className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${status === 'LATE' ? 'bg-[var(--warning)] text-white shadow-sm' : 'bg-[var(--background-muted)] border border-[var(--border)] text-[var(--foreground-muted)]'}`} title="Đến trễ">
+                          <Clock size={16} />
+                        </button>
+                        <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'ABSENT')} className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${status === 'ABSENT' ? 'bg-[var(--error)] text-white shadow-sm' : 'bg-[var(--background-muted)] border border-[var(--border)] text-[var(--foreground-muted)]'}`} title="Vắng">
+                          <X size={16} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
