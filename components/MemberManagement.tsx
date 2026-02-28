@@ -134,48 +134,42 @@ const MemberManagement: React.FC = () => {
 
   return (
     <div className="w-full animate-fade-in">
-      {/* Tiêu đề + Action bar — kiểu Puzzler */}
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)]">Ca Viên</h1>
-        <p className="text-sm text-[var(--foreground-muted)] mt-1">Sổ Bộ Ban Điều Hành Ca Đoàn Thiên Thần</p>
-        <div className="members-action-bar mt-4">
-          <span className="text-sm text-[var(--foreground-muted)]">Hiển thị <strong className="text-[var(--foreground)]">{filteredMembers.length}</strong> ca viên</span>
-          <div className="flex-1 min-w-0" />
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--foreground-muted)]" size={16} />
-            <Input
-              type="text"
-              placeholder="Tìm tên, tên thánh..."
-              className="pl-9 h-10 text-sm"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <Button variant="secondary" onClick={handleExport} className="flex items-center gap-2 shrink-0">
-            <FileDown size={16} /> Xuất
-          </Button>
-          <Button onClick={openAddModal} className="flex items-center gap-2 shrink-0">
-            <UserPlus size={16} /> Thêm ca viên
-          </Button>
-        </div>
+      {/* Tiêu đề */}
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-3xl font-bold text-[var(--foreground)]">Ca Viên</h1>
+        <p className="text-xs sm:text-sm text-[var(--foreground-muted)] mt-0.5 sm:mt-1">Sổ Bộ Ban Điều Hành Ca Đoàn Thiên Thần</p>
       </div>
 
       {/* Tabs — Sổ Bộ / Điểm Danh */}
-      <div className="members-page-tabs mb-6">
-        <button
-          type="button"
-          onClick={() => setActiveTab('LIST')}
-          className={`members-page-tab ${activeTab === 'LIST' ? 'active' : ''}`}
-        >
+      <div className="members-page-tabs mb-4 sm:mb-6">
+        <button type="button" onClick={() => setActiveTab('LIST')} className={`members-page-tab ${activeTab === 'LIST' ? 'active' : ''}`}>
           Sổ Bộ
         </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('ATTENDANCE')}
-          className={`members-page-tab ${activeTab === 'ATTENDANCE' ? 'active' : ''}`}
-        >
+        <button type="button" onClick={() => setActiveTab('ATTENDANCE')} className={`members-page-tab ${activeTab === 'ATTENDANCE' ? 'active' : ''}`}>
           Điểm Danh
         </button>
+      </div>
+
+      {/* Action bar — responsive */}
+      <div className="mb-4 sm:mb-6 space-y-3">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--foreground-muted)]" size={16} />
+          <Input type="text" placeholder="Tìm tên, tên thánh..." className="pl-9 h-10 text-sm w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs sm:text-sm text-[var(--foreground-muted)]"><strong className="text-[var(--foreground)]">{filteredMembers.length}</strong> ca viên</span>
+          <div className="flex-1" />
+          {activeTab === 'LIST' && (
+            <>
+              <Button variant="secondary" onClick={handleExport} className="flex items-center gap-1.5 text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4 shrink-0">
+                <FileDown size={14} /> <span className="hidden sm:inline">Xuất</span>
+              </Button>
+              <Button onClick={openAddModal} className="flex items-center gap-1.5 text-xs sm:text-sm h-9 sm:h-10 px-3 sm:px-4 shrink-0">
+                <UserPlus size={14} /> <span className="hidden sm:inline">Thêm ca viên</span>
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {activeTab === 'LIST' ? (
@@ -201,35 +195,40 @@ const MemberManagement: React.FC = () => {
           </div>
 
           {/* Danh sách: card trên mobile, bảng trên desktop */}
-          <div className="space-y-3 md:space-y-0">
+          <div className="space-y-2 md:space-y-0">
             {/* Mobile: card list */}
-            <div className="block md:hidden space-y-3">
-              {filteredMembers.map((m) => (
-                <div key={m.id} className="members-card-row">
-                  <div className="members-card-avatar">{m.name.trim()[0] || '?'}</div>
+            <div className="block md:hidden space-y-2">
+              {filteredMembers.map((m, idx) => (
+                <div key={m.id} className="members-card-row items-center py-3 px-3 gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[var(--primary-muted)] flex items-center justify-center text-xs font-bold text-[var(--primary)] shrink-0">
+                    {idx + 1}
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[var(--foreground)] truncate">{m.name}</p>
-                    <p className="text-sm text-[var(--primary)] font-medium">{m.saintName || '—'}</p>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <span className="text-xs text-[var(--foreground-muted)] bg-[var(--background-muted)] px-2 py-0.5 rounded-lg">{m.role}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-semibold text-[var(--primary)]">{m.saintName || ''}</span>
+                      <span className="font-semibold text-sm text-[var(--foreground)] truncate">{m.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className="text-[10px] text-[var(--foreground-muted)] bg-[var(--background-muted)] px-1.5 py-0.5 rounded">{m.role}</span>
                       {statusBadge(m.status)}
+                      {m.birthYear && <span className="text-[10px] text-[var(--foreground-muted)]">{m.birthYear}</span>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <button type="button" onClick={() => { setEditingMember(m); setForm(m); setIsModalOpen(true); }} className="p-2.5 rounded-xl text-[var(--foreground-muted)] hover:text-[var(--primary)] hover:bg-[var(--primary-muted)] transition-all" title="Sửa">
-                      <Edit2 size={18} />
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <button type="button" onClick={() => { setEditingMember(m); setForm(m); setIsModalOpen(true); }} className="p-2 rounded-lg text-[var(--foreground-muted)] hover:text-[var(--primary)] hover:bg-[var(--primary-muted)] transition-all" title="Sửa">
+                      <Edit2 size={15} />
                     </button>
-                    <button type="button" onClick={() => setConfirmDelete({ open: true, id: m.id, name: m.name })} className="p-2.5 rounded-xl text-[var(--foreground-muted)] hover:text-[var(--error)] hover:bg-[var(--error-bg)] transition-all" title="Xóa">
-                      <Trash2 size={18} />
+                    <button type="button" onClick={() => setConfirmDelete({ open: true, id: m.id, name: m.name })} className="p-2 rounded-lg text-[var(--foreground-muted)] hover:text-[var(--error)] hover:bg-[var(--error-bg)] transition-all" title="Xóa">
+                      <Trash2 size={15} />
                     </button>
                   </div>
                 </div>
               ))}
               {filteredMembers.length === 0 && (
                 <div className="members-empty-state">
-                  <Users size={48} className="mx-auto text-[var(--foreground-muted)] opacity-50 mb-3" />
-                  <p className="text-base font-semibold text-[var(--foreground-muted)]">Chưa ghi nhận ca viên nào</p>
-                  <Button className="mt-4" onClick={openAddModal}>Thêm ca viên đầu tiên</Button>
+                  <Users size={40} className="mx-auto text-[var(--foreground-muted)] opacity-50 mb-3" />
+                  <p className="text-sm font-semibold text-[var(--foreground-muted)]">Chưa ghi nhận ca viên nào</p>
+                  <Button className="mt-3" onClick={openAddModal}>Thêm ca viên đầu tiên</Button>
                 </div>
               )}
             </div>
@@ -297,70 +296,70 @@ const MemberManagement: React.FC = () => {
       ) : (
         /* Tab Điểm Danh */
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="liquid-glass rounded-2xl p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[var(--primary-muted)] flex items-center justify-center text-[var(--primary)] shrink-0">
-                <CalendarDays size={24} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-[var(--foreground-muted)] uppercase tracking-wide">Ngày điểm danh</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <button type="button" onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d.toISOString().split('T')[0]); }} className="p-1 rounded-lg hover:bg-[var(--background-muted)] text-[var(--foreground-muted)] transition-colors"><ChevronLeft size={16} /></button>
-                  <span className="text-lg font-bold text-[var(--foreground)] tabular-nums min-w-[120px] text-center">
-                    {new Date(selectedDate + 'T00:00:00').toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                  </span>
-                  <button type="button" onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d.toISOString().split('T')[0]); }} className="p-1 rounded-lg hover:bg-[var(--background-muted)] text-[var(--foreground-muted)] transition-colors"><ChevronRight size={16} /></button>
+          {/* Date picker + stats */}
+          <div className="liquid-glass rounded-2xl p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              {/* Date navigation */}
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[var(--primary-muted)] flex items-center justify-center text-[var(--primary)] shrink-0">
+                  <CalendarDays size={20} />
                 </div>
-                <button type="button" onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])} className="text-xs text-[var(--primary)] font-medium mt-1 hover:underline">Hôm nay</button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] sm:text-xs font-semibold text-[var(--foreground-muted)] uppercase tracking-wide">Ngày điểm danh</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <button type="button" onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() - 1); setSelectedDate(d.toISOString().split('T')[0]); }} className="p-1 rounded-lg hover:bg-[var(--background-muted)] text-[var(--foreground-muted)] transition-colors"><ChevronLeft size={16} /></button>
+                    <span className="text-base sm:text-lg font-bold text-[var(--foreground)] tabular-nums text-center">
+                      {new Date(selectedDate + 'T00:00:00').toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </span>
+                    <button type="button" onClick={() => { const d = new Date(selectedDate); d.setDate(d.getDate() + 1); setSelectedDate(d.toISOString().split('T')[0]); }} className="p-1 rounded-lg hover:bg-[var(--background-muted)] text-[var(--foreground-muted)] transition-colors"><ChevronRight size={16} /></button>
+                    <button type="button" onClick={() => { const d = new Date(); setSelectedDate(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`); }} className="ml-1 text-[10px] sm:text-xs text-[var(--primary)] font-medium hover:underline">Hôm nay</button>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="liquid-glass rounded-2xl p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[var(--success-bg)] flex items-center justify-center text-[var(--success)] shrink-0">
-                <UserCheck size={24} />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-[var(--foreground-muted)] uppercase tracking-wide">Hiện diện</p>
-                <p className="text-2xl font-bold text-[var(--success)] tabular-nums mt-0.5">{attendanceStats.presentCount}<span className="text-sm font-medium text-[var(--foreground-muted)]">/{attendanceStats.total}</span></p>
-              </div>
-            </div>
-            <div className="liquid-glass rounded-2xl p-5 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[var(--error-bg)] flex items-center justify-center text-[var(--error)] shrink-0">
-                <X size={24} />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-[var(--foreground-muted)] uppercase tracking-wide">Vắng mặt</p>
-                <p className="text-2xl font-bold text-[var(--error)] tabular-nums mt-0.5">{attendanceStats.total - attendanceStats.presentCount}<span className="text-sm font-medium text-[var(--foreground-muted)]">/{attendanceStats.total}</span></p>
+              {/* Stats inline */}
+              <div className="flex gap-4 sm:gap-6 pl-[52px] sm:pl-0">
+                <div className="text-center">
+                  <p className="text-[10px] sm:text-xs font-semibold text-[var(--foreground-muted)] uppercase">Hiện diện</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[var(--success)] tabular-nums">{attendanceStats.presentCount}<span className="text-xs sm:text-sm font-medium text-[var(--foreground-muted)]">/{attendanceStats.total}</span></p>
+                </div>
+                <div className="w-px bg-[var(--border)]" />
+                <div className="text-center">
+                  <p className="text-[10px] sm:text-xs font-semibold text-[var(--foreground-muted)] uppercase">Vắng</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[var(--error)] tabular-nums">{attendanceStats.total - attendanceStats.presentCount}<span className="text-xs sm:text-sm font-medium text-[var(--foreground-muted)]">/{attendanceStats.total}</span></p>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Danh sách điểm danh: card mobile, table desktop */}
-          <div className="space-y-3">
-            <div className="block md:hidden space-y-3">
-              {filteredMembers.map(m => {
+          <div className="space-y-2">
+            <div className="block md:hidden space-y-1.5">
+              {filteredMembers.map((m, idx) => {
                 const record = attendanceData.find(d => d.date === selectedDate)?.records.find(r => r.memberId === m.id);
                 const status = record?.status || 'ABSENT';
-                const oneLineName = [m.saintName, m.name].filter(Boolean).join(' · ') || m.name;
                 return (
-                  <div key={m.id} className={`members-card-row ${status !== 'ABSENT' ? 'bg-[var(--background-muted)]/50 border-[var(--secondary)]/30' : ''}`}>
-                    <div className={`members-card-avatar ${status === 'PRESENT' ? 'bg-[var(--secondary)] text-white' : status === 'LATE' ? 'bg-[var(--warning)] text-[var(--background)]' : 'bg-[var(--background-muted)] text-[var(--foreground-muted)]'}`}>
-                      {m.name[0]}
+                  <div key={m.id} className={`flex items-center gap-2.5 py-2.5 px-3 rounded-xl border transition-all ${status === 'PRESENT' ? 'bg-[var(--success-bg)]/30 border-[var(--success)]/20' : status === 'LATE' ? 'bg-[var(--warning-bg)]/30 border-[var(--warning)]/20' : 'bg-[var(--background-elevated)] border-[var(--border)]'}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${status === 'PRESENT' ? 'bg-[var(--success)] text-white' : status === 'LATE' ? 'bg-[var(--warning)] text-white' : 'bg-[var(--background-muted)] text-[var(--foreground-muted)]'}`}>
+                      {idx + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-[var(--foreground)] truncate">{oneLineName}</p>
-                      <p className="text-xs text-[var(--foreground-muted)]">
+                      <div className="flex items-center gap-1">
+                        {m.saintName && <span className="text-[10px] font-semibold text-[var(--primary)]">{m.saintName}</span>}
+                        <span className="text-sm font-semibold text-[var(--foreground)] truncate">{m.name}</span>
+                      </div>
+                      <span className={`text-[10px] font-medium ${status === 'PRESENT' ? 'text-[var(--success)]' : status === 'LATE' ? 'text-[var(--warning)]' : 'text-[var(--foreground-muted)]'}`}>
                         {status === 'PRESENT' ? 'Hiện diện' : status === 'LATE' ? 'Đến trễ' : 'Vắng mặt'}
-                      </p>
+                      </span>
                     </div>
-                    <div className="flex gap-2">
-                      <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'PRESENT')} className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl flex items-center justify-center transition-all ${status === 'PRESENT' ? 'bg-[var(--secondary)] text-white shadow-sm' : 'bg-[var(--background-elevated)] border border-[var(--border)] text-[var(--foreground-muted)] hover:text-[var(--secondary)] hover:border-[var(--secondary)]/50'}`} title="Hiện diện">
-                        <UserCheck size={20} />
+                    <div className="flex gap-1.5 shrink-0">
+                      <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'PRESENT')} className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${status === 'PRESENT' ? 'bg-[var(--success)] text-white shadow-sm' : 'bg-[var(--background-muted)] border border-[var(--border)] text-[var(--foreground-muted)]'}`} title="Hiện diện">
+                        <UserCheck size={16} />
                       </button>
-                      <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'LATE')} className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl flex items-center justify-center transition-all ${status === 'LATE' ? 'bg-[var(--warning)] text-[var(--background)] shadow-sm' : 'bg-[var(--background-elevated)] border border-[var(--border)] text-[var(--foreground-muted)] hover:text-[var(--warning)] hover:border-[var(--warning)]/50'}`} title="Đến trễ">
-                        <Clock size={20} />
+                      <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'LATE')} className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${status === 'LATE' ? 'bg-[var(--warning)] text-white shadow-sm' : 'bg-[var(--background-muted)] border border-[var(--border)] text-[var(--foreground-muted)]'}`} title="Đến trễ">
+                        <Clock size={16} />
                       </button>
-                      <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'ABSENT')} className={`min-w-[44px] min-h-[44px] w-11 h-11 rounded-xl flex items-center justify-center transition-all ${status === 'ABSENT' ? 'bg-[var(--error)] text-white shadow-sm' : 'bg-[var(--background-elevated)] border border-[var(--border)] text-[var(--foreground-muted)] hover:text-[var(--error)] hover:border-[var(--error)]/50'}`} title="Báo vắng">
-                        <X size={20} />
+                      <button type="button" onClick={() => updateAttendance(selectedDate, 'c-thienthan', m.id, 'ABSENT')} className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${status === 'ABSENT' ? 'bg-[var(--error)] text-white shadow-sm' : 'bg-[var(--background-muted)] border border-[var(--border)] text-[var(--foreground-muted)]'}`} title="Vắng">
+                        <X size={16} />
                       </button>
                     </div>
                   </div>
